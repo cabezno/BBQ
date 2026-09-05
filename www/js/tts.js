@@ -71,38 +71,23 @@
     BBQTTS.init();
     window.BBQTTS = BBQTTS;
 
-    // ── Voz neural on-device (Piper) — voces en ESPAÑOL reales, offline ──
+    // ── Voz neural on-device (MMS-TTS por Transformers.js) — español, mismo runtime que el STT (que sí carga) ──
     window.BBQNeuralTTS = {
-        _mod: null,
+        synth: null,
         loading: null,
-        DEFAULT: 'es_AR-daniela-high',
-        // Voces en español de Piper (se descarga un modelo por voz la 1ª vez).
+        DEFAULT: 'es_mms',
         voices: [
-            { id: 'es_AR-daniela-high', name: 'Daniela (Argentina) 🇦🇷' },
-            { id: 'es_MX-claude-high', name: 'Claude (México)' },
-            { id: 'es_ES-sharvard-medium', name: 'Sharvard (España)' },
-            { id: 'es_ES-davefx-medium', name: 'Davefx (España)' },
-            { id: 'es_MX-ald-medium', name: 'Ald (México)' }
+            { id: 'es_mms', name: 'Voz neural (MMS)' }
         ],
         get available() { return this.voices.map(v => v.id); },
 
         _load() {
-            if (this._mod) return Promise.resolve(this._mod);
+            if (this.synth) return Promise.resolve(this.synth);
             if (!this.loading) {
                 this.loading = (async () => {
-                    // Best-effort: configurar onnxruntime-web (1 hilo, sin SharedArrayBuffer,
-                    // ruta de wasm en CDN) por si Piper comparte esta instancia.
-                    try {
-                        const ortMod = await import('https://esm.run/onnxruntime-web');
-                        const ORT = ortMod.default || ortMod;
-                        if (ORT && ORT.env && ORT.env.wasm) {
-                            ORT.env.wasm.numThreads = 1;
-                            ORT.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
-                        }
-                    } catch (e) { /* seguimos igual */ }
-                    const m = await import('https://esm.run/@mintplex-labs/piper-tts-web@1.0.5');
-                    this._mod = m.default || m;
-                    return this._mod;
+                    const { pipeline } = await import('https://esm.run/@huggingface/transformers');
+                    this.synth = await pipeline('text-to-speech', 'Xenova/mms-tts-spa');
+                    return this.synth;
                 })();
             }
             return this.loading;
@@ -127,28 +112,31 @@
             return meta;
         },
 
-        async speak(text, voiceId) {
-            const first = !this._mod;
-            if (first && window.bbqToast) window.bbqToast('✨ Cargando voz neural (1ª vez descarga el modelo)...');
+        async speak(text) {
+            const first = !this.synth;
+            if (first && window.bbqToast) window.bbqToast('✨ Cargando voz neural (1ª vez ~40MB)...');
             try {
-                const tts = await this._load();
-                let id = voiceId || (window.BBQTTS && window.BBQTTS.neuralVoice) || this.DEFAULT;
-                if (!this.available.includes(id)) { id = this.DEFAULT; if (window.BBQTTS) window.BBQTTS.neuralVoice = id; }
-                const blob = await tts.predict({ text, voiceId: id });
-                const url = URL.createObjectURL(blob);
-                const a = new Audio(url);
-                a.onended = () => URL.revokeObjectURL(url);
-                await a.play();
+                const synth = await this._load();
+                const out = await synth(text);
+                const AC = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AC();
+                const buf = ctx.createBuffer(1, out.audio.length, out.sampling_rate);
+                buf.getChannelData(0).set(out.audio);
+                const src = ctx.createBufferSource();
+                src.buffer = buf;
+                src.connect(ctx.destination);
+                src.start();
+                src.onended = () => { try { ctx.close(); } catch (e) {} };
                 return true;
             } catch (e) {
-                console.warn('[Piper] falló, uso voz del sistema:', e);
+                console.warn('[MMS-TTS] falló, uso voz del sistema:', e);
                 if (window.bbqToast) window.bbqToast('Voz neural no disponible acá; uso la del sistema.');
                 this._systemFallback(text); // que siempre hable algo
                 return false;
             }
         }
     };
-    // Migrar la voz elegida vieja (Kokoro) a una válida de Piper.
+    // Migrar la voz elegida vieja a la válida actual.
     if (!window.BBQNeuralTTS.available.includes(BBQTTS.neuralVoice)) {
         BBQTTS.neuralVoice = window.BBQNeuralTTS.DEFAULT;
     }
