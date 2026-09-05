@@ -1825,12 +1825,22 @@ function renderStorySlide() {
             `;
             if (buyDrawer) buyDrawer.style.display = 'none';
         } else {
+            const iv = slide.imageUrl || '';
+            let media;
+            if (iv.startsWith('idb:')) {
+                media = `<img data-att="${iv.slice(4)}" style="max-width:100%; max-height:60vh; border-radius:12px; margin-bottom:14px;">`;
+            } else if (iv.startsWith('data:image')) {
+                media = `<img src="${iv}" style="max-width:100%; max-height:60vh; border-radius:12px; margin-bottom:14px;">`;
+            } else {
+                media = `<div style="font-size:5rem; margin-bottom:14px;">${iv || '🎧'}</div>`;
+            }
             contentArea.innerHTML = `
                 <div style="text-align:center;">
-                    <div style="font-size:5rem; margin-bottom:14px;">${slide.imageUrl || '🎧'}</div>
+                    ${media}
                     <div class="font-inter-black" style="font-size:1.3rem; color:#fff; text-shadow:0 4px 10px rgba(0,0,0,0.8);">${slide.caption}</div>
                 </div>
             `;
+            if (iv.startsWith('idb:') && typeof hydrateAttachments === 'function') hydrateAttachments();
             if (buyDrawer && slide.linkedProductId) {
                 buyDrawer.style.display = 'block';
                 const btnBuy = document.getElementById('btnStoryBuyNow');
@@ -1995,9 +2005,18 @@ async function handlePublishStatus() {
         };
     } else {
         let imgVal = currentSelectedStatusImageBase64 || document.getElementById('statusInputImageUrl').value.trim() || '📷';
-        // Comprimir la foto para que no reviente el almacenamiento (QuotaExceededError).
+        // Foto: comprimir y guardar en IndexedDB (referencia 'idb:<id>'), no base64 en localStorage.
         if (typeof imgVal === 'string' && imgVal.startsWith('data:image')) {
-            imgVal = await compressDataURL(imgVal, 720, 0.7);
+            const comp = await compressDataURL(imgVal, 1080, 0.7);
+            const sid = 'status_img_' + Date.now();
+            try {
+                const blob = await (await fetch(comp)).blob();
+                await window.BBQDB.set('messages', sid, blob);
+                bbqAttURLs[sid] = comp;
+                imgVal = 'idb:' + sid;
+            } catch (e) {
+                imgVal = comp; // respaldo: guardar el data URL comprimido
+            }
         }
         const captionVal = document.getElementById('statusInputCaption').value.trim() || 'Publicación en BBQ';
         const linkProdVal = document.getElementById('statusLinkProductSelect').value;
@@ -2027,6 +2046,7 @@ async function handlePublishStatus() {
     if (previewBox) previewBox.style.display = 'none';
 
     initInstagramStoriesBar();
+    if (typeof initInstagramStoriesFullGrid === 'function') initInstagramStoriesFullGrid(); // refrescar la pestaña "Estados"
     closeModals();
     if (window.bbqToast) window.bbqToast('🎉 ¡Estado publicado!'); else alert('🎉 ¡Estado publicado!');
 }
