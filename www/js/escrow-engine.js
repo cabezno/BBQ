@@ -22,13 +22,10 @@ class DualPhaseEscrowEngine {
         };
 
         this.merchantWallet = {
-            pendingHeld: 115.00,
-            settledAvailable: 350.00,
-            totalPaidOut: 1200.00,
-            history: [
-                { id: 'tx_991', type: 'CHARGED_ESCROW', amount: 115.00, description: 'Auriculares Hi-Fi (Retención Google Pay)', status: 'HELD', date: new Date().toLocaleDateString() },
-                { id: 'tx_990', type: 'RELEASED_PAYOUT', amount: 350.00, description: 'Venta Teclado Mecánico RGB (Entregado)', status: 'AVAILABLE', date: new Date(Date.now() - 86400000).toLocaleDateString() }
-            ]
+            pendingHeld: 0.00,
+            settledAvailable: 0.00,
+            totalPaidOut: 0.00,
+            history: []
         };
 
         this.generateSecretNonce();

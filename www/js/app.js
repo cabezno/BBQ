@@ -29,8 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // (Reemplaza el viejo WS-relay. La señalización P2P la maneja BBQNet.)
     if (window.BBQ) window.BBQ.boot();
 
-    // Select default active chat
-    selectMobileChat('p2p_store_techzone');
+    // Sin chat demo por defecto: se muestra la lista (vacía hasta agregar contactos).
 });
 
 /* ==========================================================================
@@ -174,39 +173,12 @@ function initMobileDetection() {
 }
 
 
-let currentChatId = 'p2p_store_techzone';
+let currentChatId = null;
 let currentRole = 'buyer';
 
-const CONTACTS_DATA = {
-    'p2p_store_techzone': {
-        name: 'TechZone Store 🏬',
-        avatar: '🏬',
-        status: '⚡ IA Local Activa | En línea',
-        isStore: true
-    },
-    'p2p_courier_express': {
-        name: 'Express Courier P2P 🚚',
-        avatar: '🚚',
-        status: 'Servicio de Logística Activo',
-        isCourier: true
-    },
-    'p2p_ai_assistant': {
-        name: '⚡ Nexus AI (Asistente Local)',
-        avatar: '⚡',
-        status: 'IA In-App (WASM / Ollama)',
-        isAi: true
-    },
-    'p2p_contact_juan': {
-        name: 'Juan Pérez',
-        avatar: '👨‍💼',
-        status: 'en línea'
-    },
-    'p2p_contact_maria': {
-        name: 'María Gómez',
-        avatar: '👩‍💻',
-        status: 'última vez hoy a las 18:45'
-    }
-};
+// Los contactos reales se cargan desde IndexedDB al iniciar (ver bbq-integration.js).
+// Empieza vacío: el usuario agrega contactos por número o desde su agenda.
+const CONTACTS_DATA = {};
 
 /* ==========================================================================
    1. AUTOMATIC DAILY REFERRAL POP-UP
@@ -239,29 +211,24 @@ function initDailyReferralPopup() {
 /* ==========================================================================
    2. IN-APP ENDPOINT SERVER 9090 & NATIVE INSTALLED AI APP CONNECTOR
    ========================================================================== */
-function handleTestLocalEndpoint() {
-    const requestPayload = {
-        endpoint: 'http://localhost:9090/v1/agent',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer p2p_sec_token_9918' },
-        body: { action: 'GET_STORE_INVENTORY', storeId: 'p2p_store_techzone' }
-    };
-
-    alert(`🔌 CONEXIÓN REST POST AL ENDPOINT LOCAL (PUERTO 9090):\n\n` +
-          `Endpoint: http://localhost:9090/v1/agent\n` +
-          `Estado: HTTP 200 OK (Agente Externo Conectado)\n` +
-          `Respuesta JSON: {\n  "status": "success",\n  "activeStore": "TechZone Store",\n  "inventoryItems": 3,\n  "accessLevel": 3\n}`);
+// Prueba REAL de la IA configurada (usa el proveedor + API key guardados).
+async function handleTestLocalEndpoint() {
+    if (!window.merchantAiOrchestrator) return;
+    if (window.bbqToast) window.bbqToast('Probando IA...');
+    try {
+        const res = await window.merchantAiOrchestrator.processIncomingMessage('Hola, ¿podés confirmarme que estás conectada?', 'test');
+        alert('🤖 Respuesta de la IA:\n\n' + (res.replyText || 'sin respuesta') +
+              (res.real ? '\n\n✅ Proveedor real conectado.' : '\n\n(Asistente local por reglas — configurá un proveedor + API key para IA real.)'));
+    } catch (e) {
+        alert('⚠️ Error probando la IA: ' + e.message);
+    }
 }
 
+// No existe una API pública para "conectar" con las apps de Gemini/ChatGPT instaladas.
+// La forma real de usar IA es configurar un proveedor con API key (o Ollama) en Ajustes de IA.
 function handleLaunchNativeAiApp(provider) {
-    const isGemini = provider === 'gemini';
-    const appName = isGemini ? 'Gemini App' : 'ChatGPT App';
-    const scheme = isGemini ? 'gemini://connect?app=whatsapp-p2p' : 'chatgpt://connect?app=whatsapp-p2p';
-
-    alert(`📲 CONECTANDO CON APP NATIVA INSTALADA:\n\n` +
-          `Aplicación: ${appName}\n` +
-          `Protocolo Deep-Link / Intent: ${scheme}\n` +
-          `Estado: Handshake iniciado con la App nativa del teléfono. Contexto P2P enviado exitosamente.`);
+    if (window.bbqToast) window.bbqToast('Configurá la IA con API key en Ajustes');
+    else alert('Para usar IA real, configurá un proveedor (OpenAI, Gemini, Claude, DeepSeek u Ollama) con su API key en Ajustes de IA. No es posible "conectar" directamente con las apps instaladas de Gemini/ChatGPT.');
 }
 
 /* ==========================================================================
@@ -378,23 +345,21 @@ function selectMobileChat(chatId) {
    5. SIM PHONE AUTO-DETECTION & GOOGLE / APPLE ID VERIFICATION
    ========================================================================== */
 function handleDetectSimNumber() {
-    const detectedPhone = '+54 9 11 4982-3310';
+    // Por privacidad, ni iOS ni (de forma confiable) Android permiten leer el número de la SIM.
+    if (window.bbqToast) window.bbqToast('Ingresá tu número manualmente');
+    else alert('Por privacidad, la app no puede leer el número de la SIM. Ingresalo a mano.');
     const inputPhone = document.getElementById('profileInputPhone');
-    if (inputPhone) {
-        inputPhone.value = detectedPhone;
-        alert(`📱 NÚMERO LEÍDO DIRECTAMENTE DE LA SIM DEL TELÉFONO:\n\n${detectedPhone}\n\nDetectado mediante Android Phone Hint API / iOS Contact Autofill.`);
-    }
+    if (inputPhone) inputPhone.focus();
 }
 
-function handleVerifyGoogleAccount() {
-    const phone = document.getElementById('profileInputPhone').value || '+54 9 11 4982-3310';
+function handleVerifyGoogleAccount() { handleSaveProfile(); }
+function handleVerifyAppleId() { handleSaveProfile(); }
+
+function _obsoleteVerify_unused() {
+    return; // código muerto (verificación falsa eliminada)
+    const phone = '';
     const profile = window.buyerStorage.getUserProfile();
     profile.phone = phone;
-    profile.isVerified = true;
-    profile.verificationProvider = 'Cuenta de Google';
-    profile.verifiedTimestamp = new Date().toISOString();
-
-    window.buyerStorage.saveUserProfile(profile);
     updateVerificationBadge(profile);
 
     alert(`🌐 ¡AUTENTICACIÓN EXITOSA CON CUENTA DE GOOGLE!\n\n` +
@@ -403,8 +368,9 @@ function handleVerifyGoogleAccount() {
           `Identificador Criptográfico P2P Vinculado ✅`);
 }
 
-function handleVerifyAppleId() {
-    const phone = document.getElementById('profileInputPhone').value || '+54 9 11 4982-3310';
+function _deadAppleVerify_unused() {
+    return; // código muerto (verificación falsa eliminada)
+    const phone = document.getElementById('profileInputPhone').value || '';
     const profile = window.buyerStorage.getUserProfile();
     profile.phone = phone;
     profile.isVerified = true;
@@ -423,22 +389,13 @@ function handleVerifyAppleId() {
 function updateVerificationBadge(profile) {
     const badge = document.getElementById('profileVerificationBadge');
     if (!badge) return;
-
-    if (profile && profile.isVerified) {
-        badge.innerHTML = `
-            <span style="color:var(--wa-green); font-size:1.1rem;">✅</span>
-            <span>Teléfono Verificado con <strong>${profile.verificationProvider || 'Cuenta de Google'}</strong></span>
-        `;
-        badge.style.borderColor = 'var(--wa-green)';
-        badge.style.background = 'rgba(0, 168, 132, 0.15)';
-    } else {
-        badge.innerHTML = `
-            <span style="color:var(--wa-accent-gold); font-size:1.1rem;">⚠️</span>
-            <span>Pendiente de verificación con Google o Apple ID</span>
-        `;
-        badge.style.borderColor = 'var(--wa-accent-gold)';
-        badge.style.background = 'rgba(245, 158, 11, 0.15)';
-    }
+    // La identidad es una clave criptográfica atada al dispositivo (no un "verificado" externo).
+    badge.innerHTML = `
+        <span style="color:var(--wa-green); font-size:1.1rem;">🔒</span>
+        <span>Identidad protegida por <strong>clave de dispositivo</strong></span>
+    `;
+    badge.style.borderColor = 'var(--wa-green)';
+    badge.style.background = 'rgba(0, 168, 132, 0.15)';
 }
 
 /* ==========================================================================
@@ -651,16 +608,31 @@ function sendMessage(textOverride = null) {
     renderMobileMessages();
     renderMobileChatList();
 
-    if (currentChatId === 'p2p_store_techzone' || currentChatId === 'p2p_ai_assistant' || CONTACTS_DATA[currentChatId]?.isStore) {
-        setTimeout(() => {
-            const aiResponse = window.merchantAiOrchestrator.processIncomingMessage(text, 'p2p_buyer_7721');
-            window.merchantNode.sendDirectMessage('p2p_buyer_7721', aiResponse.replyText);
-            renderMobileMessages();
-            renderMobileChatList();
-        }, 700);
+    if (currentChatId === 'p2p_ai_assistant' || CONTACTS_DATA[currentChatId]?.isStore || CONTACTS_DATA[currentChatId]?.isAi) {
+        triggerAiReply(text, currentChatId);
     }
 
     hideAttachPopup();
+}
+
+// Respuesta de IA: usa el orquestador (real si hay API/Ollama configurado; si no,
+// asistente local por reglas). Fix BUG-3: se guarda en el chat ACTUAL, no en 'p2p_buyer_7721'.
+async function triggerAiReply(text, chatId) {
+    try {
+        const res = await window.merchantAiOrchestrator.processIncomingMessage(text, window.MY_PEER_ID || 'me');
+        const replyText = (res && res.replyText) ? res.replyText : 'No pude generar una respuesta.';
+        window.buyerStorage.appendChatMessage(chatId, {
+            id: 'ai_' + Date.now(),
+            sender: chatId,
+            text: replyText,
+            isAiGenerated: true,
+            timestamp: new Date().toISOString()
+        });
+        if (currentChatId === chatId) renderMobileMessages();
+        renderMobileChatList();
+    } catch (e) {
+        console.error('[AI] Error generando respuesta:', e);
+    }
 }
 
 /* ==========================================================================
@@ -699,20 +671,51 @@ function handleSaveProfile() {
         profile.avatar = currentSelectedProfileImageBase64;
     }
 
-    window.buyerStorage.saveUserProfile(profile);
+    const saved = window.buyerStorage.saveUserProfile(profile);
+
+    // Sincronizar con la identidad real del dispositivo (nombre/teléfono del directorio P2P).
+    if (window.BBQIdentity) {
+        window.BBQIdentity.setLabels(phone, name)
+            .then(() => window.BBQIdentity.registerInDirectory())
+            .catch(() => {});
+    }
+
     updateVerificationBadge(profile);
     initInstagramStoriesBar();
 
-    alert(`✅ ¡Perfil y Foto actualizados!\n\nNombre: ${name}\nTeléfono Validado: ${phone}\nProveedor: ${profile.verificationProvider || 'Cuenta de Google'}`);
-    closeModals();
+    if (saved !== false) {
+        if (window.bbqToast) window.bbqToast('✅ Perfil actualizado'); else alert('✅ Perfil actualizado');
+        closeModals();
+    }
+}
+
+// Comprime una imagen (dataURL) a un thumbnail para que quepa en el almacenamiento local
+// y evite el QuotaExceededError que rompía el guardado de foto de perfil y estados.
+function compressDataURL(dataURL, maxDim = 512, quality = 0.8) {
+    return new Promise((resolve) => {
+        try {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if (w >= h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else if (h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => resolve(dataURL);
+            img.src = dataURL;
+        } catch (e) { resolve(dataURL); }
+    });
 }
 
 function loadProfileData() {
     const p = window.buyerStorage.getUserProfile();
     if (p) {
-        if (document.getElementById('profileInputName')) document.getElementById('profileInputName').value = p.name || 'Carlos Gómez';
-        if (document.getElementById('profileInputPhone')) document.getElementById('profileInputPhone').value = p.phone || '+54 9 11 5543-9981';
-        
+        if (document.getElementById('profileInputName')) document.getElementById('profileInputName').value = p.name || '';
+        if (document.getElementById('profileInputPhone')) document.getElementById('profileInputPhone').value = p.phone || '';
+
         const avatarDisplay = document.getElementById('profileAvatarDisplay');
         if (avatarDisplay) {
             if (p.avatar && p.avatar.startsWith('data:image')) {
@@ -907,6 +910,12 @@ function initModals() {
             renderReferralsModal();
         });
     }
+}
+
+// Fix BUG-1: openEscrowModal se llamaba en 7 lugares pero nunca estaba definida.
+// El modal de escrow se abre y renderiza vía openModal('modalEscrow').
+function openEscrowModal() {
+    openModal('modalEscrow');
 }
 
 function openModal(modalId) {
@@ -1271,7 +1280,8 @@ async function handlePayMerchantInvoice(invoiceId, totalAmount, concept, deliver
     }
 
     const db = window.buyerStorage.getDatabase();
-    const messages = db.chats[currentChatId] || [];
+    const chat = db.chats.find(c => c.contactId === currentChatId);
+    const messages = chat ? chat.messages : [];
     const msgIndex = messages.findIndex(m => m.payloadCard && m.payloadCard.id === invoiceId);
     if (msgIndex !== -1) {
         messages[msgIndex].payloadCard.status = 'PAID';
@@ -1851,8 +1861,9 @@ function handleProfilePhotoSelected(event) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
-        currentSelectedProfileImageBase64 = e.target.result;
+    reader.onload = async function(e) {
+        // Comprimir a 256px para que la foto quepa en el almacenamiento local.
+        currentSelectedProfileImageBase64 = await compressDataURL(e.target.result, 256, 0.8);
         const avatarDisplay = document.getElementById('profileAvatarDisplay');
         if (avatarDisplay) {
             avatarDisplay.innerHTML = `<img src="${currentSelectedProfileImageBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
@@ -1861,7 +1872,7 @@ function handleProfilePhotoSelected(event) {
     reader.readAsDataURL(file);
 }
 
-function handlePublishStatus() {
+async function handlePublishStatus() {
     const typeSelect = document.getElementById('statusInputType');
     const userProfile = window.buyerStorage.getUserProfile();
 
@@ -1869,7 +1880,7 @@ function handlePublishStatus() {
     if (typeSelect && typeSelect.value === 'text') {
         const textVal = document.getElementById('statusInputText').value.trim();
         if (!textVal) {
-            alert('Por favor ingresa un texto para tu estado.');
+            if (window.bbqToast) window.bbqToast('Ingresá un texto para tu estado'); else alert('Ingresá un texto para tu estado.');
             return;
         }
         newSlide = {
@@ -1878,7 +1889,11 @@ function handlePublishStatus() {
             bgColor: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)'
         };
     } else {
-        const imgVal = currentSelectedStatusImageBase64 || document.getElementById('statusInputImageUrl').value.trim() || '📷';
+        let imgVal = currentSelectedStatusImageBase64 || document.getElementById('statusInputImageUrl').value.trim() || '📷';
+        // Comprimir la foto para que no reviente el almacenamiento (QuotaExceededError).
+        if (typeof imgVal === 'string' && imgVal.startsWith('data:image')) {
+            imgVal = await compressDataURL(imgVal, 720, 0.7);
+        }
         const captionVal = document.getElementById('statusInputCaption').value.trim() || 'Publicación en BBQ';
         const linkProdVal = document.getElementById('statusLinkProductSelect').value;
 
@@ -1892,21 +1907,23 @@ function handlePublishStatus() {
 
     const newStatusObj = {
         id: `status_user_${Date.now()}`,
-        authorId: userProfile.p2pId || 'p2p_buyer_7721',
-        authorName: `${userProfile.name} (Tú)`,
+        authorId: (window.MY_PEER_ID) || userProfile.p2pId || 'me',
+        authorName: `${userProfile.name || 'Yo'} (Tú)`,
         authorAvatar: userProfile.avatar || '👤',
         timestamp: new Date().toISOString(),
         slides: [newSlide]
     };
 
-    window.buyerStorage.saveStatus(newStatusObj);
+    const saved = window.buyerStorage.saveStatus(newStatusObj);
+    if (saved === false) return; // el toast de error ya lo mostró saveDatabase
+
     currentSelectedStatusImageBase64 = null;
     const previewBox = document.getElementById('statusPhotoPreviewBox');
     if (previewBox) previewBox.style.display = 'none';
 
     initInstagramStoriesBar();
     closeModals();
-    alert('🎉 ¡Tu historia/foto ha sido publicada exitosamente en BBQ!');
+    if (window.bbqToast) window.bbqToast('🎉 ¡Estado publicado!'); else alert('🎉 ¡Estado publicado!');
 }
 
 function toggleStatusCreatorMode() {
@@ -2378,6 +2395,11 @@ function handleSendStoryReaction(emoji) {
 
 let voiceRecordTimerInterval = null;
 let voiceRecordSeconds = 0;
+let bbqMediaRecorder = null;
+let bbqAudioChunks = [];
+let bbqAudioStream = null;
+let bbqVoiceShouldSend = false;
+const bbqVoiceURLs = {}; // id de nota de voz -> objectURL (para reproducir en la sesión)
 
 function handleChatInputTyping() {
     const input = document.getElementById('mTextInput');
@@ -2395,14 +2417,33 @@ function handleChatInputTyping() {
     }
 }
 
-function handleStartVoiceRecording() {
+async function handleStartVoiceRecording() {
     const bar = document.getElementById('mVoiceRecordBar');
     const timerEl = document.getElementById('mVoiceRecordTimer');
+
+    // Grabación REAL con micrófono.
+    try {
+        bbqAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+        if (window.bbqToast) window.bbqToast('🎤 Sin permiso de micrófono'); else alert('No se pudo acceder al micrófono.');
+        return;
+    }
+    bbqAudioChunks = [];
+    bbqVoiceShouldSend = false;
+    try {
+        bbqMediaRecorder = new MediaRecorder(bbqAudioStream);
+    } catch (e) {
+        console.error('MediaRecorder no soportado:', e);
+        stopVoiceStream();
+        return;
+    }
+    bbqMediaRecorder.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) bbqAudioChunks.push(ev.data); };
+    bbqMediaRecorder.onstop = () => finalizeVoiceRecording();
+    bbqMediaRecorder.start();
 
     if (bar) bar.style.display = 'flex';
     voiceRecordSeconds = 0;
     if (timerEl) timerEl.textContent = '00:00';
-
     if (voiceRecordTimerInterval) clearInterval(voiceRecordTimerInterval);
     voiceRecordTimerInterval = setInterval(() => {
         voiceRecordSeconds++;
@@ -2412,95 +2453,84 @@ function handleStartVoiceRecording() {
     }, 1000);
 }
 
-function handleCancelVoiceRecording() {
+function stopVoiceStream() {
     if (voiceRecordTimerInterval) clearInterval(voiceRecordTimerInterval);
+    if (bbqAudioStream) { bbqAudioStream.getTracks().forEach(t => t.stop()); bbqAudioStream = null; }
     const bar = document.getElementById('mVoiceRecordBar');
     if (bar) bar.style.display = 'none';
 }
 
+function handleCancelVoiceRecording() {
+    bbqVoiceShouldSend = false;
+    if (bbqMediaRecorder && bbqMediaRecorder.state !== 'inactive') bbqMediaRecorder.stop();
+    stopVoiceStream();
+}
+
 function handleSendVoiceRecording() {
-    if (voiceRecordTimerInterval) clearInterval(voiceRecordTimerInterval);
-    const bar = document.getElementById('mVoiceRecordBar');
-    if (bar) bar.style.display = 'none';
+    bbqVoiceShouldSend = true;
+    if (bbqMediaRecorder && bbqMediaRecorder.state !== 'inactive') {
+        bbqMediaRecorder.stop(); // dispara onstop → finalizeVoiceRecording()
+    }
+    stopVoiceStream();
+}
+
+async function finalizeVoiceRecording() {
+    if (!bbqVoiceShouldSend) { bbqAudioChunks = []; return; }
 
     const durationSec = Math.max(1, voiceRecordSeconds);
-    const mins = String(Math.floor(durationSec / 60)).padStart(2, '0');
-    const secs = String(durationSec % 60).padStart(2, '0');
-    const durationStr = `${mins}:${secs}`;
+    const durationStr = `${String(Math.floor(durationSec / 60)).padStart(2, '0')}:${String(durationSec % 60).padStart(2, '0')}`;
+    const blob = new Blob(bbqAudioChunks, { type: (bbqAudioChunks[0] && bbqAudioChunks[0].type) || 'audio/webm' });
+    bbqAudioChunks = [];
+    const vnId = 'vn_' + Date.now();
+
+    // El audio va a IndexedDB (no a localStorage), y una URL en memoria para reproducir ya.
+    try { await window.BBQDB.set('messages', vnId, blob); } catch (e) {}
+    bbqVoiceURLs[vnId] = URL.createObjectURL(blob);
 
     const msgObj = {
         id: 'msg_' + Date.now(),
-        sender: 'p2p_buyer_7721',
+        sender: window.MY_PEER_ID || 'me',
         text: `🎤 Nota de voz (${durationStr})`,
-        timestamp: Date.now(),
-        payloadCard: {
-            type: 'voice_note',
-            id: 'vn_' + Date.now(),
-            durationStr: durationStr
-        }
+        timestamp: new Date().toISOString(),
+        payloadCard: { type: 'voice_note', id: vnId, durationStr: durationStr }
     };
-
     window.buyerStorage.appendChatMessage(currentChatId, msgObj);
     renderMobileMessages();
     renderMobileChatList();
 
-    // Trigger AI Auto-reply for Voice Notes if active store
-    if (currentChatId === 'p2p_store_techzone' || CONTACTS_DATA[currentChatId]?.isStore) {
-        setTimeout(() => {
-            const aiMsgObj = {
-                id: 'msg_' + Date.now(),
-                sender: currentChatId,
-                text: '🎤 Escuché tu nota de voz. El asistente virtual autónomo procesó tu audio correctamente.',
-                timestamp: Date.now(),
-                isAiGenerated: true,
-                payloadCard: {
-                    type: 'voice_note',
-                    id: 'vn_reply_' + Date.now(),
-                    durationStr: '00:03'
-                }
-            };
-            window.buyerStorage.appendChatMessage(currentChatId, aiMsgObj);
-            renderMobileMessages();
-            renderMobileChatList();
-        }, 1200);
+    // Enviar por P2P al contacto real (audio en base64 por el DataChannel).
+    const contact = CONTACTS_DATA[currentChatId];
+    if (contact && contact.isReal && window.BBQNet) {
+        const b64 = await bbqBlobToBase64(blob);
+        window.BBQNet.send(currentChatId, { type: 'voice', message: msgObj, audio: b64 }).then(r => {
+            if (!r.ok && window.bbqToast) window.bbqToast('⚠️ Nota no entregada (contacto offline)');
+        });
     }
 }
 
-function handlePlayVoiceNote(noteId) {
+function bbqBlobToBase64(blob) {
+    return new Promise((resolve) => {
+        const r = new FileReader();
+        r.onloadend = () => resolve(r.result);
+        r.readAsDataURL(blob);
+    });
+}
+
+async function handlePlayVoiceNote(noteId) {
     const btn = document.getElementById(`btnPlayVoice_${noteId}`);
-    if (btn) {
-        btn.innerHTML = '<i class="bi bi-pause-fill"></i>';
+    let url = bbqVoiceURLs[noteId];
+    if (!url) {
+        try {
+            const blob = await window.BBQDB.get('messages', noteId);
+            if (blob) { url = URL.createObjectURL(blob); bbqVoiceURLs[noteId] = url; }
+        } catch (e) {}
     }
+    if (!url) { if (window.bbqToast) window.bbqToast('Audio no disponible'); return; }
 
-    try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-            const ctx = new AudioCtx();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(440, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 1.2);
-
-            gain.gain.setValueAtTime(0.15, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.2);
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc.start();
-            osc.stop(ctx.currentTime + 1.2);
-        }
-    } catch (e) {
-        console.log('AudioContext playback simulation', e);
-    }
-
-    setTimeout(() => {
-        if (btn) {
-            btn.innerHTML = '<i class="bi bi-play-fill"></i>';
-        }
-    }, 1500);
+    const audio = new Audio(url);
+    if (btn) btn.innerHTML = '<i class="bi bi-pause-fill"></i>';
+    audio.onended = () => { if (btn) btn.innerHTML = '<i class="bi bi-play-fill"></i>'; };
+    audio.play().catch(() => { if (btn) btn.innerHTML = '<i class="bi bi-play-fill"></i>'; });
 }
 
 

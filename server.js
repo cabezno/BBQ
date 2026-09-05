@@ -119,6 +119,69 @@ app.get('/api/user/:phone', (req, res) => {
     res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey } });
 });
 
+// ── Proxy de IA (evita CORS de los proveedores; la API key la manda el cliente) ──
+// Body: { provider, apiKey, model, system, prompt, endpoint }
+app.post('/api/ai', async (req, res) => {
+    const { provider, apiKey, model, system, prompt, endpoint } = req.body || {};
+    if (!prompt) return res.status(400).json({ ok: false, error: 'Falta el mensaje' });
+    try {
+        let text = '';
+        if (provider === 'openai' || provider === 'deepseek') {
+            const base = provider === 'deepseek' ? 'https://api.deepseek.com/v1' : 'https://api.openai.com/v1';
+            const r = await fetch(`${base}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                    model: model || (provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o-mini'),
+                    messages: [
+                        { role: 'system', content: system || 'Sos un asistente útil.' },
+                        { role: 'user', content: prompt }
+                    ]
+                })
+            });
+            const j = await r.json();
+            text = j.choices?.[0]?.message?.content || j.error?.message || 'Sin respuesta';
+        } else if (provider === 'anthropic') {
+            const r = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+                body: JSON.stringify({
+                    model: model || 'claude-3-5-sonnet-20241022',
+                    max_tokens: 1024,
+                    system: system || '',
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+            const j = await r.json();
+            text = j.content?.[0]?.text || j.error?.message || 'Sin respuesta';
+        } else if (provider === 'gemini') {
+            const m = model || 'gemini-1.5-flash';
+            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: (system ? system + '\n\n' : '') + prompt }] }] })
+            });
+            const j = await r.json();
+            text = j.candidates?.[0]?.content?.parts?.[0]?.text || j.error?.message || 'Sin respuesta';
+        } else if (provider === 'ollama') {
+            const base = endpoint || 'http://localhost:11434';
+            const r = await fetch(`${base}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: model || 'llama3', prompt: (system ? system + '\n\n' : '') + prompt, stream: false })
+            });
+            const j = await r.json();
+            text = j.response || 'Sin respuesta';
+        } else {
+            return res.status(400).json({ ok: false, error: 'Proveedor no soportado' });
+        }
+        res.json({ ok: true, text });
+    } catch (e) {
+        console.error('[AI] Error:', e.message);
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // ── Estado del servidor ──
 app.get('/api/status', (req, res) => {
     res.json({

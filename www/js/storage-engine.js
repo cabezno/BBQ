@@ -21,32 +21,18 @@ class LocalStorageEngine {
                     region: 'metrosur',
                     bio: 'Nodo P2P operando sin servidores centrales.'
                 },
-                contacts: [
-                    { id: 'p2p_store_techzone', name: 'TechZone Store', role: 'merchant', region: 'metrosur', avatar: '🏬' },
-                    { id: 'p2p_courier_express', name: 'Express Courier P2P', role: 'logistics', region: 'metrosur', avatar: '🚚' },
-                    { id: 'p2p_buyer_7721', name: 'Comprador Lucas', role: 'buyer', region: 'metrosur', avatar: '👤' }
-                ],
+                contacts: [],
                 products: [
                     { id: 'prod_1', name: 'Auriculares Hi-Fi Wireless Pro', price: 100, stock: 12, category: 'Tech', image: '🎧', shippingFee: 15 },
                     { id: 'prod_2', name: 'Smartwatch AMOLED V2', price: 180, stock: 8, category: 'Tech', image: '⌚', shippingFee: 15 },
                     { id: 'prod_3', name: 'Cargador Solar Portátil 20000mAh', price: 45, stock: 25, category: 'Gadgets', image: '🔋', shippingFee: 8 }
                 ],
-                chats: [
-                    {
-                        contactId: 'p2p_store_techzone',
-                        messages: [
-                            { id: 'm1', sender: 'p2p_store_techzone', text: '¡Hola! Bienvenidos a TechZone Store en la red P2P regional.', timestamp: new Date(Date.now() - 3600000).toISOString() },
-                            { id: 'm2', sender: 'p2p_buyer_7721', text: 'Hola, ¿tienen stock de los Auriculares Wireless Pro y cuánto sale el envío?', timestamp: new Date(Date.now() - 1800000).toISOString() }
-                        ]
-                    }
-                ],
+                chats: [],
                 escrowTransactions: [],
                 referralState: {
-                    invitedCount: 14,
+                    invitedCount: 0,
                     target: 20,
-                    unlockedRewards: [
-                        { id: 'rew_1', title: 'Funda Protectora Auriculares', storeName: 'TechZone Store', claimed: false }
-                    ]
+                    unlockedRewards: []
                 }
             };
             localStorage.setItem(this.dbKey, JSON.stringify(initialData));
@@ -58,7 +44,17 @@ class LocalStorageEngine {
     }
 
     saveDatabase(data) {
-        localStorage.setItem(this.dbKey, JSON.stringify(data));
+        try {
+            localStorage.setItem(this.dbKey, JSON.stringify(data));
+            return true;
+        } catch (e) {
+            // Evita el fallo silencioso por QuotaExceededError (ej: imágenes muy grandes).
+            console.error('[STORAGE] No se pudo guardar (¿almacenamiento lleno?):', e);
+            if (typeof window !== 'undefined' && window.bbqToast) {
+                window.bbqToast('⚠️ No se pudo guardar (almacenamiento lleno)');
+            }
+            return false;
+        }
     }
 
     // --- PRODUCTS QUERY API ---
@@ -122,22 +118,20 @@ class LocalStorageEngine {
     getUserProfile() {
         const db = this.getDatabase();
         return db.userProfile || {
-            name: 'Carlos Gómez',
-            status: '¡Hola! Estoy usando WhatsApp P2P',
-            phone: '+54 9 11 5543-9981',
+            name: '',
+            status: 'Disponible en BBQ',
+            phone: '',
             p2pId: this.nodeId,
             avatar: '👤',
             region: 'metrosur',
-            isVerified: true,
-            verificationProvider: 'Cuenta de Google', // 'Cuenta de Google' | 'Apple ID'
-            verifiedTimestamp: new Date().toISOString()
+            isVerified: false
         };
     }
 
     saveUserProfile(profile) {
         const db = this.getDatabase();
         db.userProfile = profile;
-        this.saveDatabase(db);
+        return this.saveDatabase(db);
     }
 
     getUserStore() {
@@ -396,61 +390,8 @@ class LocalStorageEngine {
 
     getStatuses() {
         const db = this.getDatabase();
-        if (!db.statuses || db.statuses.length === 0) {
-            db.statuses = [
-                {
-                    id: 'status_store_1',
-                    authorId: 'p2p_store_techzone',
-                    authorName: 'TechZone Store 🏬',
-                    authorAvatar: '🏬',
-                    isStore: true,
-                    timestamp: new Date(Date.now() - 900000).toISOString(),
-                    slides: [
-                        {
-                            type: 'text',
-                            content: '🔥 ¡Llegaron las Ofertas de Temporada a TechZone Store en BBQ!',
-                            bgColor: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)'
-                        },
-                        {
-                            type: 'image',
-                            imageUrl: '🎧',
-                            caption: '🎧 Auriculares Wireless Hi-Fi - $100.00 USD',
-                            linkedProductId: 'prod_1',
-                            linkedProductName: 'Auriculares Hi-Fi Wireless Pro',
-                            linkedProductPrice: 100
-                        }
-                    ]
-                },
-                {
-                    id: 'status_courier_1',
-                    authorId: 'p2p_courier_express',
-                    authorName: 'Express Courier 🚚',
-                    authorAvatar: '🚚',
-                    isCourier: true,
-                    timestamp: new Date(Date.now() - 3600000).toISOString(),
-                    slides: [
-                        {
-                            type: 'text',
-                            content: '🚚 Rutas de despacho rápido activas en Zona Metro Sur.',
-                            bgColor: 'linear-gradient(135deg, #11998e, #38ef7d)'
-                        }
-                    ]
-                },
-                {
-                    id: 'status_contact_juan',
-                    authorId: 'p2p_contact_juan',
-                    authorName: 'Juan Pérez 👨‍💼',
-                    authorAvatar: '👨‍💼',
-                    timestamp: new Date(Date.now() - 7200000).toISOString(),
-                    slides: [
-                        {
-                            type: 'text',
-                            content: '¡Probando la nueva app BBQ con comercio P2P! 🍖🔥',
-                            bgColor: 'linear-gradient(135deg, #ff416c, #ff4b2b)'
-                        }
-                    ]
-                }
-            ];
+        if (!db.statuses) {
+            db.statuses = [];
             this.saveDatabase(db);
         }
         return db.statuses;
@@ -460,7 +401,7 @@ class LocalStorageEngine {
         const db = this.getDatabase();
         if (!db.statuses) db.statuses = [];
         db.statuses.unshift(statusObj);
-        this.saveDatabase(db);
+        return this.saveDatabase(db);
     }
 }
 

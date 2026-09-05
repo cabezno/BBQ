@@ -8,8 +8,8 @@
  * Contacto guardado: { peerId, phone, name, publicKey, addedAt }
  */
 (function () {
-    // Cambiá esta URL por el link real de descarga de BBQ cuando publiques la app.
-    const INVITE_URL = 'https://blackmagicbox.es/bbq';
+    // URL de la app desplegada (o el link de descarga cuando publiques el APK).
+    const INVITE_URL = 'https://bbq-9gbi.onrender.com';
 
     function normalizePhone(raw) {
         if (!raw) return '';

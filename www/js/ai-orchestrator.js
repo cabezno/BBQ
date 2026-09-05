@@ -33,9 +33,54 @@ class LocalAIOrchestrator {
         this.logAiEvent(`Orquestador de IA ${status ? 'ACTIVADO' : 'DESACTIVADO'}`);
     }
 
-    processIncomingMessage(messageText, senderId) {
+    // IA REAL: si hay un proveedor con API key (o Ollama) configurado, llama al proxy del
+    // servidor y devuelve la respuesta del modelo. Si no, usa el asistente local por reglas.
+    async processIncomingMessage(messageText, senderId) {
+        this.logAiEvent(`Analizando mensaje de [${senderId}]: "${messageText}"`);
+        const cfg = this.storage.getAiConfig ? this.storage.getAiConfig() : {};
+        if (cfg.autoReplyEnabled === false) {
+            return { replyText: 'El asistente de IA está pausado por el usuario.' };
+        }
+        const providerMap = { gemini_api: 'gemini', openai_api: 'openai', claude_api: 'anthropic', deepseek_api: 'deepseek', ollama_local: 'ollama' };
+        const provider = providerMap[cfg.engine];
+        const hasKey = cfg.apiKey && String(cfg.apiKey).trim();
+        if (provider && (hasKey || provider === 'ollama')) {
+            try {
+                const r = await fetch(`${window.BBQ_SERVER}/api/ai`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider,
+                        apiKey: cfg.apiKey,
+                        model: cfg.model,
+                        system: cfg.systemPrompt || this._storeContext(),
+                        prompt: messageText,
+                        endpoint: cfg.endpointUrl
+                    })
+                });
+                const j = await r.json();
+                if (j.ok && j.text) return { replyText: j.text, engine: cfg.engine, real: true };
+                return { replyText: '⚠️ IA: ' + (j.error || 'sin respuesta') };
+            } catch (e) {
+                return { replyText: '⚠️ No se pudo conectar la IA (' + e.message + ').' };
+            }
+        }
+        return this._localReply(messageText);
+    }
+
+    _storeContext() {
+        try {
+            const p = (this.storage.getProducts && this.storage.getProducts()) || [];
+            const list = p.map(x => `- ${x.name}: $${x.price} (stock ${x.stock}, envío $${x.shippingFee || 0})`).join('\n');
+            return `Sos el asistente de una tienda en la app BBQ. Respondé breve, en español. Catálogo:\n${list}`;
+        } catch (e) {
+            return 'Sos el asistente de una tienda P2P. Respondé breve y en español.';
+        }
+    }
+
+    // Asistente local por reglas (respaldo cuando no hay IA real configurada).
+    _localReply(messageText) {
         const text = (messageText || '').toLowerCase();
-        this.logAiEvent(`Analizando mensaje entrante de [${senderId}]: "${messageText}"`);
 
         const aiConfig = this.storage.getAiConfig ? this.storage.getAiConfig() : { engine: 'gemini_api', accessLevel: 3, autoReplyEnabled: true };
         if (!aiConfig.autoReplyEnabled) {

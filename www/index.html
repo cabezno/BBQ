@@ -654,17 +654,16 @@
                     <div class="form-group" style="text-align:left;">
                         <label class="font-inter-black">Número de Teléfono del Dispositivo:</label>
                         <div style="display:flex; gap:8px;">
-                            <input type="tel" class="form-control font-inter-light" id="profileInputPhone" value="+54 9 11 5543-9981" autocomplete="tel" required>
-                            <button type="button" class="btn-wa-secondary" style="font-size:0.75rem; white-space:nowrap; padding:6px 10px;" onclick="handleDetectSimNumber()"><i class="bi bi-sim"></i> SIM</button>
+                            <input type="tel" class="form-control font-inter-light" id="profileInputPhone" placeholder="+54 9 11 5555-1234" autocomplete="tel" required>
                         </div>
                     </div>
-                    <div style="background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:12px; margin:12px 0; text-align:left;">
-                        <button type="button" class="btn-auth-google" onclick="handleVerifyGoogleAccount()"><i class="bi bi-google"></i> Validar con Cuenta de Google (Android)</button>
-                        <button type="button" class="btn-auth-apple" onclick="handleVerifyAppleId()"><i class="bi bi-apple"></i> Validar con Sign in with Apple (iOS)</button>
+                    <div style="background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:12px; margin:12px 0; text-align:left; font-size:0.78rem; color:var(--wa-text-secondary);">
+                        <i class="bi bi-shield-lock-fill" style="color:var(--wa-green);"></i>
+                        Tu identidad está protegida por una <strong>clave criptográfica de este dispositivo</strong>. El número solo sirve para que tus contactos te encuentren.
                     </div>
                     <div class="form-group" style="text-align:left;">
                         <label class="font-inter-black">Nombre Visible:</label>
-                        <input type="text" class="form-control font-inter-light" id="profileInputName" value="Carlos Gómez" required>
+                        <input type="text" class="form-control font-inter-light" id="profileInputName" placeholder="Tu nombre" required>
                     </div>
                     <button type="submit" class="btn-wa-primary" style="width:100%; margin-top:10px;"><i class="bi bi-floppy-fill"></i> Guardar Perfil</button>
                 </form>

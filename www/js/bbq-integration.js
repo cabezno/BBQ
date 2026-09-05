@@ -53,13 +53,21 @@
         initNetListener() {
             if (!window.BBQNet) return;
             window.BBQNet.onMessage(async (fromPeerId, msg) => {
-                if (!msg || msg.type !== 'chat' || !msg.message) return;
+                if (!msg || (msg.type !== 'chat' && msg.type !== 'voice') || !msg.message) return;
 
                 // Asegurar que el remitente exista como contacto
                 if (typeof CONTACTS_DATA !== 'undefined' && !CONTACTS_DATA[fromPeerId]) {
                     let known = await window.BBQContacts.get(fromPeerId);
                     if (!known) known = { peerId: fromPeerId, name: 'Nuevo contacto BBQ' };
                     this._mergeContact(known);
+                }
+
+                // Nota de voz entrante: decodificar el audio (base64) y guardarlo en IndexedDB.
+                if (msg.type === 'voice' && msg.audio && msg.message.payloadCard) {
+                    try {
+                        const blob = await (await fetch(msg.audio)).blob();
+                        await window.BBQDB.set('messages', msg.message.payloadCard.id, blob);
+                    } catch (e) { console.warn('[BBQ] No se pudo guardar audio entrante', e); }
                 }
 
                 const incoming = msg.message;
