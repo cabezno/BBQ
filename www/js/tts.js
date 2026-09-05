@@ -75,13 +75,15 @@
     window.BBQNeuralTTS = {
         tts: null,
         loading: null,
+        available: [],   // ids de voz REALES del modelo cargado
         modelId: 'onnx-community/Kokoro-82M-v1.0-ONNX',
+        // Sugeridas (se reemplazan por las reales al cargar el modelo).
         voices: [
-            { id: 'ef_dora', label: 'Dora — español (femenina)' },
-            { id: 'em_alex', label: 'Alex — español (masculina)' },
-            { id: 'em_santa', label: 'Santa — español (masculina)' }
+            { id: 'ef_dora', label: 'Dora — español (F)' },
+            { id: 'em_alex', label: 'Alex — español (M)' },
+            { id: 'em_santa', label: 'Santa — español (M)' }
         ],
-        async ensure(progressCb) {
+        async ensure() {
             if (this.tts) return this.tts;
             if (!this.loading) {
                 this.loading = (async () => {
@@ -89,25 +91,44 @@
                     const KokoroTTS = mod.KokoroTTS || (mod.default && mod.default.KokoroTTS);
                     const device = (typeof navigator !== 'undefined' && navigator.gpu) ? 'webgpu' : 'wasm';
                     this.tts = await KokoroTTS.from_pretrained(this.modelId, { dtype: 'q8', device });
+                    // Leer las voces REALES disponibles.
+                    try {
+                        let lv = null;
+                        if (KokoroTTS.list_voices) lv = KokoroTTS.list_voices();
+                        else if (this.tts.list_voices) lv = this.tts.list_voices();
+                        else if (this.tts.voices) lv = this.tts.voices;
+                        this.available = lv ? (Array.isArray(lv) ? lv : Object.keys(lv)) : [];
+                    } catch (e) { this.available = []; }
+                    console.log('[Kokoro] voces disponibles:', this.available);
                     return this.tts;
                 })();
             }
             return this.loading;
+        },
+        // Elegí una voz válida: la pedida si existe; si no, una en español; si no, la primera.
+        _pick(voiceId) {
+            const av = this.available || [];
+            if (!av.length) return voiceId;
+            if (av.includes(voiceId)) return voiceId;
+            const es = av.find(v => String(v).toLowerCase().startsWith('e'));
+            return es || av[0];
         },
         async speak(text, voiceId) {
             const first = !this.tts;
             if (first && window.bbqToast) window.bbqToast('✨ Cargando voz neural (1ª vez ~80MB)...');
             try {
                 const tts = await this.ensure();
-                const audio = await tts.generate(text, { voice: voiceId || 'ef_dora' });
+                const v = this._pick(voiceId);
+                const audio = await tts.generate(text, { voice: v });
                 const blob = audio.toBlob();
                 const url = URL.createObjectURL(blob);
                 const a = new Audio(url);
                 a.onended = () => URL.revokeObjectURL(url);
                 await a.play();
+                if (v !== voiceId && window.bbqToast) window.bbqToast('Voz usada: ' + v);
                 return true;
             } catch (e) {
-                if (window.bbqToast) window.bbqToast('Voz neural: ' + e.message);
+                if (window.bbqToast) window.bbqToast('Voz neural: ' + (e && e.message || e));
                 return false;
             }
         }
@@ -117,8 +138,19 @@
     window.openVoicesPanel = async function () {
         const voices = await BBQTTS.ready();
 
-        // Sección de voz neural (Kokoro) — mejor calidad, se muestra siempre.
-        const neuralSection = (window.BBQNeuralTTS ? window.BBQNeuralTTS.voices : []).map(nv => {
+        // Sección de voz neural (Kokoro). Si el modelo ya cargó, usa las voces REALES;
+        // si no, muestra las sugeridas (se corrigen al primer uso).
+        const nt = window.BBQNeuralTTS;
+        let neuralList = [];
+        if (nt) {
+            if (nt.available && nt.available.length) {
+                const esV = nt.available.filter(id => String(id).toLowerCase().startsWith('e'));
+                neuralList = (esV.length ? esV : nt.available).slice(0, 12).map(id => ({ id, label: id }));
+            } else {
+                neuralList = nt.voices;
+            }
+        }
+        const neuralSection = neuralList.map(nv => {
             const checked = BBQTTS.mode === 'neural' && BBQTTS.neuralVoice === nv.id;
             return `<div style="display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid var(--wa-border-light); background:rgba(245,158,11,0.06);">
                 <input type="radio" name="bbqVoice" ${checked ? 'checked' : ''} data-nv="${nv.id}" onchange="window.BBQTTS.selectNeural(this.getAttribute('data-nv'))" style="accent-color:var(--wa-green);">
