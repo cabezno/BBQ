@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProfileData();
     loadAiSetupData();
     loadStoreData();
+    if (window.buyerStorage.consolidateStatuses) window.buyerStorage.consolidateStatuses(); // agrupar estados por autor
     initInstagramStoriesBar();
     initP2PRealtimeListener();
     initMobileDetection();
@@ -2029,16 +2030,13 @@ async function handlePublishStatus() {
         };
     }
 
-    const newStatusObj = {
-        id: `status_user_${Date.now()}`,
+    // Agrupar todos mis estados bajo un solo perfil (como WhatsApp): se agrega como slide.
+    const author = {
         authorId: (window.MY_PEER_ID) || userProfile.p2pId || 'me',
         authorName: `${userProfile.name || 'Yo'} (Tú)`,
-        authorAvatar: userProfile.avatar || '👤',
-        timestamp: new Date().toISOString(),
-        slides: [newSlide]
+        authorAvatar: userProfile.avatar || '👤'
     };
-
-    const saved = window.buyerStorage.saveStatus(newStatusObj);
+    const saved = window.buyerStorage.addStatusSlide(author, newSlide);
     if (saved === false) return; // el toast de error ya lo mostró saveDatabase
 
     currentSelectedStatusImageBase64 = null;

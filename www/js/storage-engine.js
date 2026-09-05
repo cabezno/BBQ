@@ -403,6 +403,55 @@ class LocalStorageEngine {
         db.statuses.unshift(statusObj);
         return this.saveDatabase(db);
     }
+
+    // Agrupa los estados por autor: si ya existe un perfil del autor, agrega el slide;
+    // si no, crea el perfil. Así todos tus estados quedan bajo una sola burbuja (como WhatsApp).
+    addStatusSlide(author, slide) {
+        const db = this.getDatabase();
+        if (!db.statuses) db.statuses = [];
+        let st = db.statuses.find(s => s.authorId === author.authorId);
+        if (st) {
+            st.slides.push(slide);
+            st.timestamp = new Date().toISOString();
+            // Mover el perfil al frente (más reciente primero)
+            db.statuses = [st, ...db.statuses.filter(s => s !== st)];
+        } else {
+            st = {
+                id: 'status_' + author.authorId + '_' + Date.now(),
+                authorId: author.authorId,
+                authorName: author.authorName,
+                authorAvatar: author.authorAvatar,
+                timestamp: new Date().toISOString(),
+                slides: [slide]
+            };
+            db.statuses.unshift(st);
+        }
+        return this.saveDatabase(db) ? st : false;
+    }
+
+    // Une estados separados del mismo autor en un solo perfil (migra los ya publicados).
+    consolidateStatuses() {
+        const db = this.getDatabase();
+        if (!db || !db.statuses || db.statuses.length === 0) return;
+        const byAuthor = {};
+        const order = [];
+        for (const s of db.statuses) {
+            if (!byAuthor[s.authorId]) {
+                byAuthor[s.authorId] = { ...s, slides: [...(s.slides || [])] };
+                order.push(s.authorId);
+            } else {
+                byAuthor[s.authorId].slides.push(...(s.slides || []));
+                if (new Date(s.timestamp) > new Date(byAuthor[s.authorId].timestamp)) {
+                    byAuthor[s.authorId].timestamp = s.timestamp;
+                }
+            }
+        }
+        const merged = order.map(a => byAuthor[a]);
+        if (merged.length !== db.statuses.length) {
+            db.statuses = merged;
+            this.saveDatabase(db);
+        }
+    }
 }
 
 // Storage engine initialization is now handled by p2p-node.js
