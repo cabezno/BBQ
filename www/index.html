@@ -269,7 +269,8 @@
                         <div class="m-header-actions">
                             <button class="icon-btn-m" onclick="openCatalogModal()" title="Ver Catálogo"><i class="bi bi-bag-check"></i></button>
                             <button class="icon-btn-m" onclick="openEscrowModal()" title="Pago Escrow"><i class="bi bi-qr-code"></i></button>
-                            <button class="icon-btn-m" title="Llamar"><i class="bi bi-telephone"></i></button>
+                            <button class="icon-btn-m" onclick="handleChatCall(false)" title="Llamar"><i class="bi bi-telephone"></i></button>
+                            <button class="icon-btn-m" onclick="handleChatCall(true)" title="Videollamada"><i class="bi bi-camera-video"></i></button>
                         </div>
                     </div>
 
@@ -1215,6 +1216,7 @@
     <script src="js/referral-engine.js"></script>
     <script src="js/automation-engine.js"></script>
     <script src="js/p2p-live-engine.js"></script>
+    <script src="js/call-engine.js"></script>
     <script src="js/onboarding.js"></script>
     <script src="js/app.js"></script>
     <script src="js/bbq-integration.js"></script>

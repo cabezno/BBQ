@@ -2124,10 +2124,22 @@ function handleContactPickerSelect(contactId, mode) {
             type: 'outgoing',
             timestamp: new Date().toISOString()
         });
-        switchMobileTab('calls');
         renderCallsSection();
-        alert(`📞 Iniciando llamada encriptada P2P con ${contact.name}...`);
+        // Llamada P2P REAL (voz). Para contactos reales usa WebRTC; si no, avisa.
+        if (contact.isReal && window.BBQCall) {
+            window.BBQCall.startCall(contactId, false);
+        } else if (window.bbqToast) {
+            window.bbqToast('Solo podés llamar a contactos reales de BBQ');
+        }
     }
+}
+
+// Llamar (voz o video) al contacto del chat abierto.
+function handleChatCall(withVideo) {
+    const contact = (typeof currentChatId !== 'undefined') ? CONTACTS_DATA[currentChatId] : null;
+    if (!currentChatId || !contact) { if (window.bbqToast) window.bbqToast('Abrí el chat de un contacto'); return; }
+    if (!contact.isReal) { if (window.bbqToast) window.bbqToast('Solo podés llamar a contactos reales de BBQ'); return; }
+    if (window.BBQCall) window.BBQCall.startCall(currentChatId, !!withVideo);
 }
 
 function handleCreateNewContactPrompt() {
@@ -2358,7 +2370,7 @@ function handleHostPinProductPrompt() {
 }
 
 function handleHostFlipCamera() {
-    alert('🔄 Alternando entre Cámara Frontal y Trasera del Dispositivo...');
+    if (window.p2pLiveEngine) window.p2pLiveEngine.flipCamera();
 }
 
 function openLiveViewer(hostId) {

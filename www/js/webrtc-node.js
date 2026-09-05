@@ -23,6 +23,7 @@
         msgListeners: [],
         stateListeners: [],
         mediaSignalListeners: [], // para Vivos (streaming de cámara)
+        callSignalListeners: [],  // para llamadas P2P (voz/video)
         _reconnectDelay: 1000,
 
         // ── Init: conecta la señalización y se anuncia ──
@@ -34,7 +35,8 @@
         onMessage(cb) { this.msgListeners.push(cb); },
         onPeerState(cb) { this.stateListeners.push(cb); },
         onMediaSignal(cb) { this.mediaSignalListeners.push(cb); },
-        // Enviar señalización arbitraria a un peer (lo usa el motor de Vivos con data.ns='media').
+        onCallSignal(cb) { this.callSignalListeners.push(cb); },
+        // Enviar señalización arbitraria a un peer (Vivos usan data.ns='media'; llamadas data.ns='call').
         sendSignal(to, data) { this._signal(to, data); },
 
         _emitMessage(fromPeerId, msg) { this.msgListeners.forEach(fn => fn(fromPeerId, msg)); },
@@ -143,10 +145,13 @@
             const from = m.from;
             const data = m.data || {};
 
-            // Multiplexado: la señalización de media (Vivos) se enruta al motor de Vivos,
-            // no a la conexión de datos.
+            // Multiplexado: media (Vivos) y llamadas se enrutan a sus motores, no a la conexión de datos.
             if (data.ns === 'media') {
                 this.mediaSignalListeners.forEach(fn => fn(from, data));
+                return;
+            }
+            if (data.ns === 'call') {
+                this.callSignalListeners.forEach(fn => fn(from, data));
                 return;
             }
 

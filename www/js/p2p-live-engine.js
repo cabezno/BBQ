@@ -212,6 +212,27 @@ class P2PLiveEngine {
         this.viewerCount = 0;
     }
 
+    // ─────────── Cambiar cámara (frontal/trasera) ───────────
+    async flipCamera() {
+        if (!this.localStream) return;
+        const cur = this.localStream.getVideoTracks()[0];
+        const facing = (cur && cur.getSettings && cur.getSettings().facingMode === 'environment') ? 'user' : 'environment';
+        try {
+            const ns = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+            const newTrack = ns.getVideoTracks()[0];
+            this.viewers.forEach(pc => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) sender.replaceTrack(newTrack);
+            });
+            if (cur) { this.localStream.removeTrack(cur); cur.stop(); }
+            this.localStream.addTrack(newTrack);
+            const v = document.getElementById('hostLiveVideoElement');
+            if (v) v.srcObject = this.localStream;
+        } catch (e) {
+            if (window.bbqToast) window.bbqToast('No se pudo cambiar la cámara');
+        }
+    }
+
     // ─────────── Reacciones flotantes ───────────
     sendFloatingEmoji(emoji, containerId) {
         const container = document.getElementById(containerId);
