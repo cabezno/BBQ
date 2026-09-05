@@ -42,10 +42,12 @@
 
         speak(text, voiceName) {
             if (!window.speechSynthesis) { if (window.bbqToast) window.bbqToast('Este dispositivo no tiene TTS'); return; }
+            try { speechSynthesis.resume(); } catch (e) {} // iOS a veces queda "pausado"
             speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
             const v = voiceName ? this._voices.find(x => x.name === voiceName) : this.getVoice();
             if (v) { u.voice = v; u.lang = v.lang; }
+            u.rate = 1; u.pitch = 1; u.volume = 1;
             speechSynthesis.speak(u);
         }
     };
@@ -74,16 +76,19 @@
         const rest = voices.filter(v => !(v.lang || '').toLowerCase().startsWith('es'));
         const ordered = [...es, ...rest];
 
-        const rows = ordered.map((v, i) => {
+        // Escape para meter el nombre de la voz en un atributo (evita romper el onclick).
+        const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const rows = ordered.map((v) => {
             const onDevice = v.localService ? '📴 on-device' : '☁️ nube';
             const checked = (BBQTTS.chosen ? v.name === BBQTTS.chosen : (es[0] && v.name === es[0].name));
+            const dv = esc(v.name);
             return `<div style="display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid var(--wa-border-light);">
-                <input type="radio" name="bbqVoice" ${checked ? 'checked' : ''} onchange="window.BBQTTS.setVoice(${JSON.stringify(v.name)})" style="accent-color:var(--wa-green);">
+                <input type="radio" name="bbqVoice" ${checked ? 'checked' : ''} data-voice="${dv}" onchange="window.BBQTTS.setVoice(this.getAttribute('data-voice'))" style="accent-color:var(--wa-green);">
                 <div style="flex:1; min-width:0;">
-                    <div style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${v.name}</div>
-                    <div style="font-size:0.7rem; color:var(--wa-text-secondary);">${v.lang} · ${onDevice}${v.default ? ' · por defecto' : ''}</div>
+                    <div style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(v.name)}</div>
+                    <div style="font-size:0.7rem; color:var(--wa-text-secondary);">${esc(v.lang)} · ${onDevice}${v.default ? ' · por defecto' : ''}</div>
                 </div>
-                <button onclick="window.BBQTTS.speak('Hola, soy la voz de BBQ. Así sueno.', ${JSON.stringify(v.name)})" style="border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); border-radius:10px; padding:6px 10px; font-size:0.8rem; cursor:pointer;">▶️</button>
+                <button data-voice="${dv}" onclick="window.BBQTTS.speak('Hola, soy la voz de BBQ. Asi sueno.', this.getAttribute('data-voice'))" style="border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); border-radius:10px; padding:6px 10px; font-size:0.8rem; cursor:pointer;">▶️</button>
             </div>`;
         }).join('');
 
