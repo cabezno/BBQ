@@ -91,15 +91,21 @@
                     const KokoroTTS = mod.KokoroTTS || (mod.default && mod.default.KokoroTTS);
                     const device = (typeof navigator !== 'undefined' && navigator.gpu) ? 'webgpu' : 'wasm';
                     this.tts = await KokoroTTS.from_pretrained(this.modelId, { dtype: 'q8', device });
-                    // Leer las voces REALES disponibles.
-                    try {
-                        let lv = null;
-                        if (KokoroTTS.list_voices) lv = KokoroTTS.list_voices();
-                        else if (this.tts.list_voices) lv = this.tts.list_voices();
-                        else if (this.tts.voices) lv = this.tts.voices;
-                        this.available = lv ? (Array.isArray(lv) ? lv : Object.keys(lv)) : [];
-                    } catch (e) { this.available = []; }
-                    console.log('[Kokoro] voces disponibles:', this.available);
+                    // Leer las voces REALES disponibles, probando varias fuentes.
+                    const toIds = (x) => !x ? [] : (Array.isArray(x) ? x.map(String) : Object.keys(x));
+                    let av = [];
+                    try { av = toIds(mod.VOICES); } catch (e) {}
+                    if (!av.length) { try { av = toIds(KokoroTTS.VOICES); } catch (e) {} }
+                    if (!av.length) { try { av = toIds(this.tts.voices); } catch (e) {} }
+                    if (!av.length && KokoroTTS.list_voices) { try { av = toIds(KokoroTTS.list_voices()); } catch (e) {} }
+                    if (!av.length && this.tts.list_voices) { try { av = toIds(this.tts.list_voices()); } catch (e) {} }
+                    this.available = av;
+                    console.log('[Kokoro] voces disponibles (' + av.length + '):', av);
+                    // Corregir la voz elegida si no existe (usar una en español).
+                    if (window.BBQTTS && av.length && !av.includes(window.BBQTTS.neuralVoice)) {
+                        const es = av.find(v => v.toLowerCase().startsWith('e')) || av[0];
+                        window.BBQTTS.neuralVoice = es;
+                    }
                     return this.tts;
                 })();
             }
