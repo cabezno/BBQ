@@ -75,7 +75,10 @@
     window.BBQNeuralTTS = {
         tts: null,
         loading: null,
-        available: [],   // ids de voz REALES del modelo cargado
+        _lib: null,
+        _KokoroTTS: null,
+        _VOICES: null,
+        available: [],   // ids de voz REALES
         modelId: 'onnx-community/Kokoro-82M-v1.0-ONNX',
         // Sugeridas (se reemplazan por las reales al cargar el modelo).
         voices: [
@@ -83,29 +86,34 @@
             { id: 'em_alex', label: 'Alex — español (M)' },
             { id: 'em_santa', label: 'Santa — español (M)' }
         ],
+        // Carga SOLO la librería (barato) y lee la lista de voces reales, sin bajar el modelo.
+        async _loadLib() {
+            if (this._lib) return this._lib;
+            this._lib = (async () => {
+                const mod = await import('https://esm.run/kokoro-js');
+                const KokoroTTS = mod.KokoroTTS || (mod.default && mod.default.KokoroTTS);
+                let V = {};
+                try { V = mod.VOICES || (KokoroTTS && KokoroTTS.VOICES) || {}; } catch (e) {}
+                this._KokoroTTS = KokoroTTS;
+                this._VOICES = V;
+                this.available = Object.keys(V);
+                console.log('[Kokoro] voces (' + this.available.length + '):', this.available);
+                // Si la voz elegida no existe, usar una en español (o la primera).
+                if (window.BBQTTS && this.available.length && !this.available.includes(window.BBQTTS.neuralVoice)) {
+                    window.BBQTTS.neuralVoice = this.available.find(v => v.toLowerCase().startsWith('e')) || this.available[0];
+                }
+                return { KokoroTTS, V };
+            })();
+            return this._lib;
+        },
+        async listVoices() { await this._loadLib(); return this._VOICES || {}; },
         async ensure() {
             if (this.tts) return this.tts;
             if (!this.loading) {
                 this.loading = (async () => {
-                    const mod = await import('https://esm.run/kokoro-js');
-                    const KokoroTTS = mod.KokoroTTS || (mod.default && mod.default.KokoroTTS);
+                    const { KokoroTTS } = await this._loadLib();
                     const device = (typeof navigator !== 'undefined' && navigator.gpu) ? 'webgpu' : 'wasm';
                     this.tts = await KokoroTTS.from_pretrained(this.modelId, { dtype: 'q8', device });
-                    // Leer las voces REALES disponibles, probando varias fuentes.
-                    const toIds = (x) => !x ? [] : (Array.isArray(x) ? x.map(String) : Object.keys(x));
-                    let av = [];
-                    try { av = toIds(mod.VOICES); } catch (e) {}
-                    if (!av.length) { try { av = toIds(KokoroTTS.VOICES); } catch (e) {} }
-                    if (!av.length) { try { av = toIds(this.tts.voices); } catch (e) {} }
-                    if (!av.length && KokoroTTS.list_voices) { try { av = toIds(KokoroTTS.list_voices()); } catch (e) {} }
-                    if (!av.length && this.tts.list_voices) { try { av = toIds(this.tts.list_voices()); } catch (e) {} }
-                    this.available = av;
-                    console.log('[Kokoro] voces disponibles (' + av.length + '):', av);
-                    // Corregir la voz elegida si no existe (usar una en español).
-                    if (window.BBQTTS && av.length && !av.includes(window.BBQTTS.neuralVoice)) {
-                        const es = av.find(v => v.toLowerCase().startsWith('e')) || av[0];
-                        window.BBQTTS.neuralVoice = es;
-                    }
                     return this.tts;
                 })();
             }
@@ -149,9 +157,21 @@
         const nt = window.BBQNeuralTTS;
         let neuralList = [];
         if (nt) {
-            if (nt.available && nt.available.length) {
-                const esV = nt.available.filter(id => String(id).toLowerCase().startsWith('e'));
-                neuralList = (esV.length ? esV : nt.available).slice(0, 12).map(id => ({ id, label: id }));
+            let meta = {};
+            try { meta = await nt.listVoices(); } catch (e) {}
+            const LANGP = { a: 'Inglés (US)', b: 'Inglés (UK)', e: 'Español', f: 'Francés', h: 'Hindi', i: 'Italiano', j: 'Japonés', p: 'Portugués', z: 'Chino' };
+            const label = (id) => {
+                const m = meta[id] || {};
+                const g = id[1] === 'f' ? 'F' : (id[1] === 'm' ? 'M' : '');
+                const lang = LANGP[id[0]] || m.language || '';
+                const nm = m.name || id;
+                return `${nm} — ${lang}${g ? ' (' + g + ')' : ''}`;
+            };
+            const ids = Object.keys(meta);
+            if (ids.length) {
+                const es = ids.filter(id => id[0] === 'e');       // español primero
+                const others = ids.filter(id => id[0] !== 'e');
+                neuralList = [...es, ...others.slice(0, 8)].map(id => ({ id, label: label(id) }));
             } else {
                 neuralList = nt.voices;
             }
