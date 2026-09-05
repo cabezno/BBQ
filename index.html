@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BBQ - Mobile P2P Commerce, Local AI & Escrow</title>
+    <!-- Metadatos de Aplicación Móvil Nativa (PWA / iOS / Android) -->
+    <meta name="theme-color" content="#121b22">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Google Fonts Inter (300, 400, 600, 900) & Bootstrap Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="mobile-body">
+
+    <!-- BARRA SUPERIOR DE SIMULACIÓN Y CONTROL MÓVIL BBQ -->
+    <div class="mobile-sim-header">
+        <div class="sim-title font-inter-black"><i class="bi bi-fire text-danger"></i> BBQ MOBILE P2P</div>
+        <div class="sim-controls">
+            <button class="sim-mode-btn active" id="btnToggleFrame" title="Cambiar Vista Marco de Teléfono / Pantalla Completa">
+                <i class="bi bi-phone"></i> Marco
+            </button>
+            <div class="sim-role-selector">
+                <button class="role-chip active" data-role="buyer"><i class="bi bi-cart3"></i> Comprador</button>
+                <button class="role-chip" data-role="merchant"><i class="bi bi-shop"></i> Tienda + IA</button>
+                <button class="role-chip" data-role="courier"><i class="bi bi-truck"></i> Repartidor</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WRAPPER PRINCIPAL DEL DISPOSITIVO MÓVIL -->
+    <div class="phone-frame-wrapper" id="phoneWrapper">
+        <div class="smartphone-device">
+            <!-- Notch / Altavoz del Teléfono -->
+            <div class="phone-notch"></div>
+            
+            <!-- Barra de Estado del Sistema Móvil -->
+            <div class="phone-status-bar">
+                <span class="font-inter-black">23:50</span>
+                <div class="status-icons">
+                    <span><i class="bi bi-wifi"></i> 5G</span>
+                    <span><i class="bi bi-battery-full"></i> 100%</span>
+                </div>
+            </div>
+
+            <!-- APLICACIÓN BBQ MÓVIL CONTAINER -->
+            <div class="mobile-app-container">
+
+                <!-- ===================================================
+                     PANTALLA 1: LISTA DE CHATS & ESTADOS / NAVEGACIÓN
+                     =================================================== -->
+                <div class="mobile-screen active" id="screenChatList">
+                    
+                    <!-- Header Superior Móvil BBQ (Logo Intacto) -->
+                    <div class="mobile-header">
+                        <div class="mobile-brand font-inter-black"><i class="bi bi-fire text-danger"></i> BBQ</div>
+                        <div class="mobile-header-actions">
+                            <button class="icon-btn-m" onclick="openModal('modalCreateStatus')" title="Crear Estado / Historia"><i class="bi bi-camera"></i></button>
+                            <button class="icon-btn-m" onclick="toggleSearchBox()" title="Buscar"><i class="bi bi-search"></i></button>
+                            <button class="icon-btn-m" id="btnMobileMenu" title="Opciones"><i class="bi bi-three-dots-vertical"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- BARRA SUPERIOR SUB-HEADER DE LA PESTAÑA SELECCIONADA -->
+                    <div class="top-nav-tabs" id="topSelectedTabHeader">
+                        <button class="tab-btn active" id="currentSelectedTabBadge">
+                            <i class="bi bi-chat-text-fill"></i> Chats
+                        </button>
+                    </div>
+
+                    <!-- MENÚ DESPLEGABLE NATIVO DE OPCIONES BBQ (⋮) -->
+                    <div class="wa-popup-menu" id="mobilePopupMenu" style="display:none;">
+                        <div class="wa-pop-item" onclick="openModal('modalProfile'); hidePopupMenu();">
+                            <i class="bi bi-person-circle"></i> <span>Mi Perfil & Teléfono</span>
+                        </div>
+                        <div class="wa-pop-item" onclick="openModal('modalCreateStore'); hidePopupMenu();">
+                            <i class="bi bi-shop"></i> <span>Mi Tienda & Productos</span>
+                        </div>
+                        <div class="wa-pop-item" onclick="openModal('modalAiSetup'); hidePopupMenu();">
+                            <i class="bi bi-robot"></i> <span>Conectar IA & Port 9090</span>
+                        </div>
+                        <div class="wa-pop-item" onclick="openModal('modalAutomations'); hidePopupMenu();">
+                            <i class="bi bi-cpu"></i> <span>Automatizaciones IA</span>
+                        </div>
+                        <div class="wa-pop-item" onclick="openModal('modalSettings'); hidePopupMenu();">
+                            <i class="bi bi-gear-fill"></i> <span>Ajustes & Referidos</span>
+                        </div>
+                    </div>
+
+                    <!-- BUSCADOR DESPLEGABLE CON HISTORIAL Y SUGERENCIAS LOCALES BBQ -->
+                    <div class="mobile-search-dropdown" id="mobileSearchBox" style="display:none;">
+                        <div class="search-inner-wrapper">
+                            <i class="bi bi-search search-icon font-inter-black"></i>
+                            <input type="text" id="mSearchInput" class="font-inter-light" placeholder="Buscar en la pestaña actual..." oninput="handleLiveSearchFilter()" onfocus="showSearchHistorySuggestions()">
+                            <button class="btn-clear-search" onclick="toggleSearchBox()"><i class="bi bi-x-circle-fill"></i></button>
+                        </div>
+                        <!-- Historial de Búsquedas Guardadas Localmente -->
+                        <div class="search-history-dropdown" id="searchHistoryBox" style="display:none;">
+                            <div class="search-history-header">
+                                <span class="font-inter-black" style="font-size:0.75rem; color:var(--wa-text-secondary);"><i class="bi bi-clock-history"></i> Búsquedas Recientes</span>
+                                <button type="button" style="background:none; border:none; color:var(--wa-green); font-size:0.7rem; cursor:pointer;" onclick="clearSearchHistory()">Limpiar</button>
+                            </div>
+                            <div class="search-history-chips" id="searchHistoryChips">
+                                <!-- Injected dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BARRA DE FILTROS CONTEXTUALES ARRIBA SEGÚN PESTAÑA SELECCIONADA -->
+                    <div class="contextual-filter-bar" id="contextualFilterBar">
+                        <!-- Injected dynamically by JS per active tab -->
+                    </div>
+
+
+
+                    <!-- VISTA 1: CHATS CONTAINER -->
+                    <div id="viewChatsSection">
+                        <!-- BARRA HORIZONTAL DE HISTORIAS / ESTADOS ESTILO INSTAGRAM EN HEADER DE CHATS -->
+                        <div class="instagram-stories-bar" id="instagramStoriesHeaderBar">
+                            <!-- Injected by JS: My Story + Store Stories + Contact Stories -->
+                        </div>
+                        <!-- Lista de Conversaciones -->
+                        <div class="mobile-chat-scroll" id="mChatListContainer"></div>
+                    </div>
+
+                    <!-- VISTA 2: ESTADOS / NOVEDADES CONTAINER (ESTILO INSTAGRAM STORIES LIST) -->
+                    <div id="viewUpdatesSection" style="display:none; padding:12px; overflow-y:auto; flex:1;">
+                        <div class="stories-section-header">
+                            <h4 class="font-inter-black" style="font-size:0.95rem; margin-bottom:10px;"><i class="bi bi-stars text-warning"></i> Historias de Tiendas & Contactos</h4>
+                        </div>
+                        <div class="instagram-stories-full-grid" id="instagramStoriesFullGrid">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- VISTA 3: TIENDAS P2P & MARQUESINA DE PROMOCIONES CONTAINER -->
+                    <div id="viewStoresSection" style="display:none; padding:12px; overflow-y:auto; flex:1;">
+                        <div class="stores-section-header" style="margin-bottom:8px;">
+                            <h4 class="font-inter-black" style="font-size:0.95rem;"><i class="bi bi-shop text-success"></i> Tiendas Regionales P2P</h4>
+                            <span class="font-inter-light" style="font-size:0.75rem; color:var(--wa-text-secondary);">Recientes primero y sugerencias personalizadas</span>
+                        </div>
+
+                        <!-- BUSCADOR DEDICADO DENTRO DE TIENDAS -->
+                        <div class="search-inner-wrapper" style="margin-bottom:10px;">
+                            <i class="bi bi-search search-icon font-inter-black"></i>
+                            <input type="text" id="storeInlineSearchInput" class="font-inter-light" placeholder="🔍 Buscar tienda, producto o rubro..." oninput="handleStoreInlineSearch()">
+                            <button class="btn-clear-search" onclick="document.getElementById('storeInlineSearchInput').value=''; handleStoreInlineSearch();"><i class="bi bi-x-circle-fill"></i></button>
+                        </div>
+
+                        <!-- SUB-PESTAÑAS DE TIENDAS: RECIENTES Y SUGERENCIAS PERSONALIZADAS -->
+                        <div style="display:flex; gap:6px; margin-bottom:10px;" id="storesSubNavContainer">
+                            <button class="filter-chip-pill active" id="btnStoresTabRecent" onclick="switchStoresSubTab('recent')"><i class="bi bi-clock-history"></i> Recientes primero</button>
+                            <button class="filter-chip-pill" id="btnStoresTabSuggestions" onclick="switchStoresSubTab('suggestions')"><i class="bi bi-magic"></i> Sugerencias Personalizadas</button>
+                        </div>
+
+                        <div id="storesMainListContainer">
+                            <!-- Injected by JS: Stores with animated marquee ticker & visit rankings -->
+                        </div>
+                    </div>
+
+                    <!-- VISTA 4: LLAMADAS P2P CONTAINER -->
+                    <div id="viewCallsSection" style="display:none; padding:12px; overflow-y:auto; flex:1;">
+                        <div class="calls-section-header" style="margin-bottom:10px;">
+                            <h4 class="font-inter-black" style="font-size:0.95rem;"><i class="bi bi-telephone-fill text-info"></i> Registro de Llamadas P2P (Recientes primero)</h4>
+                        </div>
+                        <div class="calls-list" id="callsListContainer">
+                            <!-- Injected dynamically by JS (Recientes primero) -->
+                        </div>
+                    </div>
+
+                    <!-- VISTA 5: COMUNIDAD P2P CONTAINER -->
+                    <div id="viewCommunitySection" style="display:none; padding:12px; overflow-y:auto; flex:1;">
+                        <div class="community-header" style="margin-bottom:8px;">
+                            <h4 class="font-inter-black" style="font-size:0.95rem;"><i class="bi bi-people-fill text-warning"></i> Comunidades & Grupos Regionales</h4>
+                        </div>
+
+                        <!-- BUSCADOR DEDICADO DENTRO DE COMUNIDAD -->
+                        <div class="search-inner-wrapper" style="margin-bottom:10px;">
+                            <i class="bi bi-search search-icon font-inter-black"></i>
+                            <input type="text" id="communityInlineSearchInput" class="font-inter-light" placeholder="🔍 Buscar entre las comunidades..." oninput="handleCommunityInlineSearch()">
+                            <button class="btn-clear-search" onclick="document.getElementById('communityInlineSearchInput').value=''; handleCommunityInlineSearch();"><i class="bi bi-x-circle-fill"></i></button>
+                        </div>
+
+                        <div class="community-groups-list" id="communityListContainer">
+                            <!-- Injected dynamically by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Botón Flotante de Acción Móvil Contextual (FAB) -->
+                    <button class="mobile-fab" id="mobileFab" title="Acción Contextual (+)" onclick="handleFabClick()">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+
+                    <!-- BARRA DE NAVEGACIÓN INFERIOR MÓVIL (EXACTAMENTE 6 PESTAÑAS) -->
+                    <div class="mobile-bottom-nav">
+                        <button class="bottom-nav-btn active" id="navBtnChats" onclick="switchMobileTab('chats')">
+                            <span class="nav-icon"><i class="bi bi-chat-fill"></i></span>
+                            <span class="nav-label font-inter-light">Chats</span>
+                        </button>
+                        <button class="bottom-nav-btn" id="navBtnCalls" onclick="switchMobileTab('calls')">
+                            <span class="nav-icon"><i class="bi bi-telephone-fill"></i></span>
+                            <span class="nav-label font-inter-light">Llamadas</span>
+                        </button>
+                        <button class="bottom-nav-btn" id="navBtnUpdates" onclick="switchMobileTab('updates')">
+                            <span class="nav-icon"><i class="bi bi-circle-square"></i></span>
+                            <span class="nav-label font-inter-light">Estados</span>
+                        </button>
+                        <button class="bottom-nav-btn" id="navBtnStores" onclick="switchMobileTab('stores')">
+                            <span class="nav-icon"><i class="bi bi-shop"></i></span>
+                            <span class="nav-label font-inter-light">Tiendas</span>
+                        </button>
+                        <button class="bottom-nav-btn" id="navBtnCommunity" onclick="switchMobileTab('community')">
+                            <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
+                            <span class="nav-label font-inter-light">Comunidad</span>
+                        </button>
+                        <button class="bottom-nav-btn" id="navBtnProfile" onclick="openModal('modalProfile')">
+                            <span class="nav-icon"><i class="bi bi-person-circle"></i></span>
+                            <span class="nav-label font-inter-light">Perfil</span>
+                        </button>
+                    </div>
+                </div>
+
+
+                <!-- ===================================================
+                     PANTALLA 2: CONVERSACIÓN DE CHAT MÓVIL BBQ
+                     =================================================== -->
+                <div class="mobile-screen" id="screenConversation">
+                    
+                    <!-- Header Conversación Móvil -->
+                    <div class="mobile-chat-header">
+                        <button class="btn-back" id="btnBackToChats">
+                            <i class="bi bi-arrow-left"></i>
+                            <div class="m-avatar" id="mActiveAvatar">🏬</div>
+                        </button>
+
+                        <div class="m-contact-details" id="mContactInfoClick">
+                            <div class="m-contact-name font-inter-black" id="mActiveName">TechZone Store</div>
+                            <div class="m-contact-status font-inter-light" id="mActiveStatus">⚡ IA Local Activa</div>
+                        </div>
+
+                        <div class="m-header-actions">
+                            <button class="icon-btn-m" onclick="openCatalogModal()" title="Ver Catálogo"><i class="bi bi-bag-check"></i></button>
+                            <button class="icon-btn-m" onclick="openEscrowModal()" title="Pago Escrow"><i class="bi bi-qr-code"></i></button>
+                            <button class="icon-btn-m" title="Llamar"><i class="bi bi-telephone"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Streaming de Mensajes Móviles -->
+                    <div class="mobile-messages-area" id="mChatMessages"></div>
+
+                    <!-- POPUP MENÚ DE ADJUNTOS (📎) -->
+                    <div class="mobile-attach-popup" id="mAttachPopup" style="display:none;">
+                        <div class="attach-grid-item" onclick="openCatalogModal(); hideAttachPopup();">
+                            <div class="attach-circle" style="background:#8b5cf6;"><i class="bi bi-bag-check"></i></div>
+                            <span>Catálogo</span>
+                        </div>
+                        <div class="attach-grid-item" onclick="openEscrowModal(); hideAttachPopup();">
+                            <div class="attach-circle" style="background:#f59e0b;"><i class="bi bi-qr-code-scan"></i></div>
+                            <span>Pago Escrow</span>
+                        </div>
+                        <div class="attach-grid-item" onclick="sendMessage('📦 Solicito información de costo de envío a mi región.'); hideAttachPopup();">
+                            <div class="attach-circle" style="background:#06b6d4;"><i class="bi bi-truck"></i></div>
+                            <span>Envío Courier</span>
+                        </div>
+                        <div class="attach-grid-item" onclick="alert('📷 Galería de fotos habilitada.'); hideAttachPopup();">
+                            <div class="attach-circle" style="background:#ec4899;"><i class="bi bi-image"></i></div>
+                            <span>Galería</span>
+                        </div>
+                        <div class="attach-grid-item" onclick="alert('📄 Documentos habilitados.'); hideAttachPopup();">
+                            <div class="attach-circle" style="background:#3b82f6;"><i class="bi bi-file-earmark-text"></i></div>
+                            <span>Documento</span>
+                        </div>
+                    </div>
+
+                    <!-- Barra Móvil de Entrada de Mensaje & Grabador de Audio -->
+                    <div class="mobile-input-bar" style="position:relative;">
+                        
+                        <!-- Barra Overlay de Grabación de Nota de Voz -->
+                        <div id="mVoiceRecordBar" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:var(--wa-header-bg); border-radius:24px; padding:6px 14px; align-items:center; justify-content:space-between; z-index:10;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <span class="voice-wave-dot" style="width:10px; height:10px; background:#ef4444; border-radius:50%; animation:pulseLive 1s infinite;"></span>
+                                <span class="font-inter-black" style="font-size:0.82rem; color:#ef4444;" id="mVoiceRecordTimer">00:03</span>
+                                <span class="font-inter-light" style="font-size:0.75rem; color:var(--wa-text-secondary);">🔴 Grabando audio P2P...</span>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" class="btn-wa-secondary" style="font-size:0.75rem; padding:4px 10px; color:#ef4444; border-color:#ef4444;" onclick="handleCancelVoiceRecording()"><i class="bi bi-trash-fill"></i> Cancelar</button>
+                                <button type="button" class="btn-wa-primary" style="font-size:0.75rem; padding:4px 12px; background:var(--wa-green);" onclick="handleSendVoiceRecording()"><i class="bi bi-send-fill"></i> Enviar Audio</button>
+                            </div>
+                        </div>
+
+                        <button class="input-icon-btn" id="mBtnEmoji"><i class="bi bi-emoji-smile"></i></button>
+                        <button class="input-icon-btn" id="mBtnAttach"><i class="bi bi-paperclip"></i></button>
+                        <input type="text" class="m-text-input font-inter-light" id="mTextInput" placeholder="Mensaje en BBQ..." oninput="handleChatInputTyping()">
+                        
+                        <!-- Botón de Micrófono para Notas de Voz -->
+                        <button class="m-send-btn" id="mBtnMic" title="Grabar Nota de Voz" style="background:var(--bbq-gradient-primary); border:1px solid #ef4444;" onclick="handleStartVoiceRecording()">
+                            <i class="bi bi-mic-fill"></i>
+                        </button>
+                        
+                        <!-- Botón de Enviar Mensaje de Texto (Oculto inicialmente hasta que haya texto) -->
+                        <button class="m-send-btn" id="mSendBtn" title="Enviar Mensaje" style="display:none;">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal POP-UP DIARIO DE REFERIDOS -->
+    <div class="wa-modal-overlay" id="modalDailyReferralPopup">
+        <div class="wa-modal-box" style="border: 2px solid var(--wa-green); text-align:center;">
+            <div class="wa-modal-header" style="background: linear-gradient(135deg, #121b22 0%, #004538 100%);">
+                <h3>🎁 DESAFÍO DIARIO DE REFERIDOS</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <div style="font-size:3rem; margin-bottom:6px;">🎉</div>
+                <h4 style="color:var(--wa-green); font-size:1.1rem; margin-bottom:6px;">¡Gana Premios Invitando Amigos Hoy!</h4>
+                <p style="font-size:0.82rem; color:var(--wa-text-secondary); margin-bottom:14px;">
+                    Alcanza 20 contactos invitados a WhatsApp P2P para desbloquear productos gratuitos en las tiendas de tu región.
+                </p>
+                <div style="background:var(--wa-header-bg); padding:10px; border-radius:12px; margin-bottom:14px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                        <span>Progreso Actual:</span>
+                        <strong id="dailyReferralCount" style="color:var(--wa-green);">0 / 20</strong>
+                    </div>
+                    <div class="referral-progress-outer">
+                        <div class="referral-progress-inner" id="dailyReferralProgressBar"></div>
+                    </div>
+                </div>
+                <button class="btn-wa-primary" id="btnDailyInvite5" style="width:100%; font-size:0.9rem; padding:12px;">
+                    📩 Invitar 5 Contactos Ahora
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: GESTOR DE AUTOMATIZACIONES POR IA 🤖 -->
+    <div class="wa-modal-overlay" id="modalAutomations">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3>🤖 Automatizaciones Creadas por la IA</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <p style="font-size:0.82rem; color:var(--wa-text-secondary); margin-bottom:14px;">
+                    Reglas autónomas que la IA ejecuta en segundo plano dentro de la app para gestionar la tienda.
+                </p>
+
+                <div id="automationsList">
+                    <!-- Dynamic Rules Render -->
+                </div>
+
+                <button class="btn-wa-primary" style="width:100%; margin-top:14px;" onclick="handleCreateCustomAutomation()">
+                    ➕ Crear Nueva Regla de Automatización
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: CONECTAR CUALQUIER IA, ENDPOINT LOCAL 9090 & APP NATIVA INSTALADA ⚡ -->
+    <div class="wa-modal-overlay" id="modalAiSetup">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3>⚡ Conectar IA, Endpoint & App Nativa</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <form id="formAiSetup" onsubmit="event.preventDefault(); handleSaveAiSetup();">
+                    
+                    <!-- 1. SERVIDOR DE ENDPOINT LOCAL EXPUESTO PUERTO 9090 -->
+                    <div style="background:rgba(6, 182, 212, 0.12); border:1px solid #06b6d4; border-radius:12px; padding:12px; margin-bottom:14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.88rem; font-weight:bold; color:#06b6d4;">🔌 Servidor de Endpoint In-App</span>
+                            <span class="status-badge" style="background:#06b6d4; color:#000; font-size:0.7rem; font-weight:bold; padding:2px 6px; border-radius:10px;">PUERTO 9090 ACTIVO</span>
+                        </div>
+                        <div style="font-size:0.75rem; color:var(--wa-text-secondary); margin-top:4px;">
+                            Endpoint REST & WebSockets expuesto en: <code style="color:#06b6d4;">http://localhost:9090/v1/agent</code>
+                        </div>
+                        <button type="button" class="btn-wa-secondary" style="width:100%; margin-top:8px; font-size:0.75rem;" onclick="handleTestLocalEndpoint()">
+                            🧪 Probar Conexión de Agente Externo (REST POST)
+                        </button>
+                    </div>
+
+                    <!-- 2. CONECTOR CON APP NATIVA INSTALADA EN EL TELÉFONO -->
+                    <div style="background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:12px; margin-bottom:14px;">
+                        <div style="font-size:0.85rem; font-weight:bold; margin-bottom:6px;">📲 Conectar con App Nativa Instalada en Smartphone</div>
+                        <div style="font-size:0.75rem; color:var(--wa-text-secondary); margin-bottom:10px;">
+                            Vincula directamente con la App de Gemini o ChatGPT que ya tienes instalada en tu teléfono vía Android Intent / iOS Deep-Link.
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn-wa-primary" style="flex:1; font-size:0.75rem; background:#4285f4; color:#fff;" onclick="handleLaunchNativeAiApp('gemini')">
+                                ♊ Abrir App Gemini
+                            </button>
+                            <button type="button" class="btn-wa-primary" style="flex:1; font-size:0.75rem; background:#10a37f; color:#fff;" onclick="handleLaunchNativeAiApp('chatgpt')">
+                                🤖 Abrir App ChatGPT
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selector Agnóstico de IA -->
+                    <div class="form-group">
+                        <label>Seleccionar Proveedor / Modelo de IA:</label>
+                        <select class="form-control" id="aiSelectEngine">
+                            <option value="gemini_api">♊ Google Gemini (Gemini 1.5 Flash / Pro API)</option>
+                            <option value="openai_api">🤖 OpenAI (ChatGPT / GPT-4o API)</option>
+                            <option value="claude_api">🧠 Anthropic (Claude 3.5 Sonnet API)</option>
+                            <option value="deepseek_api">🐳 DeepSeek (DeepSeek V3 / R1 API)</option>
+                            <option value="ollama_local">🖥️ Ollama Local (Llama 3 / Mistral - http://localhost:11434)</option>
+                            <option value="wasm_local">⚡ IA Local In-App (WebLLM / WASM - 100% Offline)</option>
+                            <option value="custom_api">🔌 API REST Personalizada (OpenAI Compatible)</option>
+                        </select>
+                    </div>
+
+                    <!-- Niveles de Acceso Otorgados por el Usuario -->
+                    <div class="form-group">
+                        <label>Nivel de Acceso Otorgado por el Usuario:</label>
+                        <select class="form-control" id="aiSelectAccessLevel" style="border-color:var(--wa-green); font-weight:600;">
+                            <option value="1">🔒 Nivel 1: Solo Lectura Pública (Solo responde stock/precios públicos)</option>
+                            <option value="2">📊 Nivel 2: Asistente de Ventas (Consulta catálogo y recomienda productos)</option>
+                            <option value="3" selected>⚡ Nivel 3: Gestión Autónoma de Pedidos (Calcula envíos y arma pagos Escrow)</option>
+                            <option value="4">🔑 Nivel 4: Administrador Total (Acceso completo a datos e inventario)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="groupApiKey">
+                        <label>API Key / Token de Acceso:</label>
+                        <input type="password" class="form-control" id="aiInputApiKey" placeholder="AIzaSy... O sk-...">
+                    </div>
+
+                    <div class="form-group" id="groupEndpointUrl" style="display:none;">
+                        <label>URL de Endpoint Custom / Local:</label>
+                        <input type="text" class="form-control" id="aiInputEndpointUrl" value="http://localhost:11434/api/generate">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Prompt del Asistente:</label>
+                        <textarea class="form-control" id="aiInputPrompt" rows="2">Eres el asistente virtual autónomo de la tienda. Atiendes consultas respetando los niveles de acceso asignados.</textarea>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin:12px 0; background:var(--wa-header-bg); padding:10px; border-radius:10px;">
+                        <span style="font-size:0.85rem;">Respuesta Autónoma Activada:</span>
+                        <input type="checkbox" id="aiCheckAutoReply" checked style="width:20px; height:20px; accent-color:var(--wa-green);">
+                    </div>
+
+                    <div style="display:flex; gap:8px; margin-bottom:10px;">
+                        <button type="button" class="btn-wa-secondary" style="flex:1; font-size:0.75rem;" onclick="openModal('modalAutomations')">
+                            🤖 Gestor de Automatizaciones
+                        </button>
+                        <button type="button" class="btn-wa-secondary" style="flex:1; font-size:0.75rem;" onclick="alert('✅ Conexión con IA y Endpoint 9090 verificada.')">
+                            🧪 Probar Conexión
+                        </button>
+                    </div>
+
+                    <button type="submit" class="btn-wa-primary" style="width:100%;">
+                        💾 Guardar IA & Otorgar Permisos
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales adicionales (Tienda, Perfil, Ajustes, Catálogo, Escrow, Referidos, Tiendas) -->
+    <div class="wa-modal-overlay" id="modalCreateStore">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3>🏬 Mi Tienda, Productos & Courier</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <form id="formCreateStore" onsubmit="event.preventDefault(); handleSaveStore();">
+                    <div class="form-group">
+                        <label>Nombre de la Tienda:</label>
+                        <input type="text" class="form-control" id="storeInputName" value="TechZone Store" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría de Negocio:</label>
+                        <select class="form-control" id="storeInputCategory">
+                            <option value="Electrónica & Audio">Electrónica & Audio</option>
+                            <option value="Indumentaria & Calzado">Indumentaria & Calzado</option>
+                            <option value="Alimentos & Bebidas">Alimentos & Bebidas</option>
+                            <option value="Servicios & Repuestos">Servicios & Repuestos</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Servicio de Courier Vinculado:</label>
+                        <select class="form-control" id="storeInputCourierPartner">
+                            <option value="Express Courier P2P">🚚 Express Courier P2P (Tarifa Base: $15.00)</option>
+                            <option value="EcoBike Delivery">🚲 EcoBike Delivery (Sustentable - Tarifa: $10.00)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Región Geográfica:</label>
+                        <select class="form-control" id="storeInputRegion">
+                            <option value="metrosur">Zona Metro Sur</option>
+                            <option value="centro">Zona Urbana Centro</option>
+                        </select>
+                    </div>
+                    <hr style="border-color:var(--wa-border-light); margin:14px 0;">
+                    <h4 style="font-size:0.9rem; margin-bottom:10px; color:var(--wa-green);">🛍️ Publicar Producto con Fotografía</h4>
+                    <div class="form-group">
+                        <label>Nombre del Producto:</label>
+                        <input type="text" class="form-control" id="prodInputName" placeholder="Ej: Auriculares Wireless Hi-Fi">
+                    </div>
+                    <div class="form-group">
+                        <label>URL / Fotografía:</label>
+                        <input type="text" class="form-control" id="prodInputImage" placeholder="https://ejemplo.com/foto.jpg o Emoji (🎧, ⌚, 🔋)">
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción Detallada:</label>
+                        <textarea class="form-control" id="prodInputDesc" rows="2" placeholder="Especificaciones del producto..."></textarea>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Precio ($ USD):</label>
+                            <input type="number" class="form-control" id="prodInputPrice" placeholder="100.00" step="0.01">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Costo Envío Courier ($):</label>
+                            <input type="number" class="form-control" id="prodInputShipping" placeholder="15.00" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Stock en Almacén:</label>
+                        <input type="number" class="form-control" id="prodInputStock" placeholder="12">
+                    </div>
+                    <button type="submit" class="btn-wa-primary" style="width:100%; margin-top:10px;">
+                        💾 Guardar Tienda & Publicar Catálogo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="wa-modal-overlay" id="modalProfile">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3 class="font-inter-black"><i class="bi bi-person-bounding-box"></i> Perfil & Foto de Perfil</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body" style="text-align:center;">
+                <!-- Display Avatar or Uploaded Photo -->
+                <div class="profile-avatar-wrapper" style="position:relative; width:80px; height:80px; margin:0 auto 10px auto;">
+                    <div style="width:100%; height:100%; border-radius:50%; background:#2a3942; display:flex; align-items:center; justify-content:center; font-size:2.5rem; overflow:hidden; border:3px solid var(--wa-green);" id="profileAvatarDisplay">👤</div>
+                    <button type="button" class="btn-avatar-camera" onclick="document.getElementById('profileFileInput').click()" title="Cambiar Foto de Perfil con Cámara/Galería">
+                        <i class="bi bi-camera-fill"></i>
+                    </button>
+                    <input type="file" id="profileFileInput" accept="image/*" style="display:none;" onchange="handleProfilePhotoSelected(event)">
+                </div>
+
+                <div class="verified-badge-pill" id="profileVerificationBadge">
+                    <span style="color:var(--wa-green); font-size:1.1rem;"><i class="bi bi-patch-check-fill text-success"></i></span>
+                    <span>Teléfono Verificado con <strong>Cuenta de Google</strong></span>
+                </div>
+                <form id="formProfile" onsubmit="event.preventDefault(); handleSaveProfile();">
+                    <div class="form-group" style="text-align:left;">
+                        <label class="font-inter-black">Número de Teléfono del Dispositivo:</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="tel" class="form-control font-inter-light" id="profileInputPhone" value="+54 9 11 5543-9981" autocomplete="tel" required>
+                            <button type="button" class="btn-wa-secondary" style="font-size:0.75rem; white-space:nowrap; padding:6px 10px;" onclick="handleDetectSimNumber()"><i class="bi bi-sim"></i> SIM</button>
+                        </div>
+                    </div>
+                    <div style="background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:12px; margin:12px 0; text-align:left;">
+                        <button type="button" class="btn-auth-google" onclick="handleVerifyGoogleAccount()"><i class="bi bi-google"></i> Validar con Cuenta de Google (Android)</button>
+                        <button type="button" class="btn-auth-apple" onclick="handleVerifyAppleId()"><i class="bi bi-apple"></i> Validar con Sign in with Apple (iOS)</button>
+                    </div>
+                    <div class="form-group" style="text-align:left;">
+                        <label class="font-inter-black">Nombre Visible:</label>
+                        <input type="text" class="form-control font-inter-light" id="profileInputName" value="Carlos Gómez" required>
+                    </div>
+                    <button type="submit" class="btn-wa-primary" style="width:100%; margin-top:10px;"><i class="bi bi-floppy-fill"></i> Guardar Perfil</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="wa-modal-overlay" id="modalSettings">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3>⚙️ Ajustes & Configuración</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <div class="settings-list">
+                    <div class="setting-item" onclick="openModal('modalProfile')">
+                        <div class="setting-icon">👤</div>
+                        <div>
+                            <div class="setting-title">Perfil & Teléfono Validado</div>
+                            <div class="setting-desc">Validación con Google / Apple ID sin SMS</div>
+                        </div>
+                    </div>
+                    <div class="setting-item" onclick="openModal('modalCreateStore')">
+                        <div class="setting-icon">🏬</div>
+                        <div>
+                            <div class="setting-title">Mi Tienda P2P, Productos & Courier</div>
+                            <div class="setting-desc">Crear comercio y cargar productos</div>
+                        </div>
+                    </div>
+                    <div class="setting-item" onclick="openModal('modalAiSetup')">
+                        <div class="setting-icon">⚡</div>
+                        <div>
+                            <div class="setting-title">Conectar IA, Endpoint & App Nativa</div>
+                            <div class="setting-desc">Gemini, ChatGPT, Claude, DeepSeek, Endpoint 9090</div>
+                        </div>
+                    </div>
+                    <div class="setting-item" onclick="openModal('modalAutomations')">
+                        <div class="setting-icon">🤖</div>
+                        <div>
+                            <div class="setting-title">Automatizaciones Creadas por IA</div>
+                            <div class="setting-desc">Reglas autónomas de despacho y stock en app</div>
+                        </div>
+                    </div>
+                    <div class="setting-item" onclick="openModal('modalReferrals')">
+                        <div class="setting-icon">🎁</div>
+                        <div>
+                            <div class="setting-title">Programa de Referidos (0/20)</div>
+                            <div class="setting-desc">Desafío diario e invitaciones para premios</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wa-modal-overlay" id="modalCatalog">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3>🛍️ Catálogo de Productos de la Tienda</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <div id="catalogModalContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wa-modal-overlay" id="modalEscrow">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3>💳 Pago Escrow por QR (Google Wallet)</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body" style="text-align:center;">
+                <div class="escrow-amount-highlight" id="modalEscrowAmount">$115.00 USD</div>
+                <div class="qr-container-box">
+                    <canvas id="modalQrCanvas" class="qr-canvas" width="200" height="200"></canvas>
+                </div>
+                <div style="font-size:0.75rem; color:var(--wa-text-secondary); margin-bottom:14px;">
+                    Secreto Criptográfico: <code id="modalKrSecret" style="color:var(--wa-green);">kr_nonce_...</code>
+                </div>
+                <button class="btn-wa-primary" id="btnModalScanCourier" style="width:100%; margin-bottom:8px;">🚚 Escaneo por el Repartidor (Courier)</button>
+                <button class="btn-wa-primary" id="btnModalScanMerchant" style="background:#8b5cf6; width:100%; margin-bottom:8px;">🏪 Escaneo Directo por el Vendedor (Retiro en Local)</button>
+                <button class="btn-wa-secondary" id="btnModalTimeoutRefund" style="width:100%;">⏳ Reembolso por Expiración</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="wa-modal-overlay" id="modalReferrals">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3>🎁 Programa de Referidos (0/20)</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                    <span>Invitaciones Aceptadas:</span>
+                    <strong id="modalReferralCount" style="color:var(--wa-green);">0 / 20</strong>
+                </div>
+                <div class="referral-progress-outer">
+                    <div class="referral-progress-inner" id="modalReferralProgressBar"></div>
+                </div>
+                <button class="btn-wa-primary" id="btnModalInvite5" style="width:100%; margin:12px 0;">📩 Invitar 5 Contactos Ahora</button>
+                <div id="modalRewardsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wa-modal-overlay" id="modalStores">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3>🏬 Tiendas Regionales P2P</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <div id="storesModalList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: SELECCIONAR CONTACTO (PARA CHATS Y LLAMADAS) -->
+    <div class="wa-modal-overlay" id="modalContactPicker">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3 id="modalContactPickerTitle" class="font-inter-black"><i class="bi bi-person-plus-fill"></i> Seleccionar Contacto</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <!-- Opción al principio de crear nuevo contacto -->
+                <button class="btn-wa-primary" style="width:100%; margin-bottom:12px; font-size:0.85rem;" id="btnCreateNewContactTop" onclick="handleCreateNewContactPrompt()">
+                    ➕ Iniciar Chat con Nuevo Número / Contacto
+                </button>
+                <div id="contactPickerListContainer">
+                    <!-- Injected dynamically by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: SELECCIONAR / BUSCAR TIENDAS (FAB TIENDAS) -->
+    <div class="wa-modal-overlay" id="modalStorePicker">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3 class="font-inter-black"><i class="bi bi-shop text-success"></i> Explorar Tiendas P2P</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <!-- Opción al principio de crear nueva tienda -->
+                <button class="btn-wa-primary" style="width:100%; margin-bottom:12px; font-size:0.85rem; background:var(--bbq-gradient-primary); border:1px solid #ef4444;" onclick="openModal('modalCreateStore')">
+                    ➕ Crear Nueva Tienda P2P
+                </button>
+                <div id="storePickerListContainer">
+                    <!-- Injected dynamically by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: SELECCIONAR / BUSCAR COMUNIDADES (FAB COMUNIDAD) -->
+    <div class="wa-modal-overlay" id="modalCommunityPicker">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3 class="font-inter-black"><i class="bi bi-people-fill text-warning"></i> Explorar Comunidades</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <!-- Opción al principio de crear nueva comunidad -->
+                <button class="btn-wa-primary" style="width:100%; margin-bottom:12px; font-size:0.85rem; background:linear-gradient(135deg, #8b5cf6, #6366f1);" onclick="openModal('modalCreateCommunity')">
+                    ➕ Crear Nueva Comunidad P2P
+                </button>
+                <div id="communityPickerListContainer">
+                    <!-- Injected dynamically by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: CREAR NUEVA COMUNIDAD P2P -->
+    <div class="wa-modal-overlay" id="modalCreateCommunity">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3 class="font-inter-black"><i class="bi bi-people-fill text-warning"></i> Crear Nueva Comunidad</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <form id="formCreateCommunity" onsubmit="event.preventDefault(); handleSaveCommunity();">
+                    <div class="form-group">
+                        <label class="font-inter-black">Nombre de la Comunidad / Grupo:</label>
+                        <input type="text" class="form-control font-inter-light" id="commInputName" placeholder="Ej: Club de Repuesto & Reparaciones" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-inter-black">Categoría / Rubro:</label>
+                        <select class="form-control font-inter-light" id="commInputCategory">
+                            <option value="Comerciantes">Comerciantes & Tiendas</option>
+                            <option value="Logistics">Logística & Couriers</option>
+                            <option value="Comunidad">Comunidad de Clientes / Vecinos</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-inter-black">Descripción:</label>
+                        <textarea class="form-control font-inter-light" id="commInputDesc" rows="3" placeholder="Propósito de la comunidad regional..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-wa-primary" style="width:100%; margin-top:10px;">
+                        <i class="bi bi-people-fill"></i> Crear Comunidad P2P
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: CREAR HISTORIA / ESTADO ESTILO INSTAGRAM 📸 -->
+    <div class="wa-modal-overlay" id="modalCreateStatus">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3 class="font-inter-black"><i class="bi bi-camera-fill text-danger"></i> Crear Estado en BBQ</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <form id="formCreateStatus" onsubmit="event.preventDefault(); handlePublishStatus();">
+                    <div class="form-group">
+                        <label class="font-inter-black">Tipo de Estado:</label>
+                        <select class="form-control" id="statusInputType" onchange="toggleStatusCreatorMode()">
+                            <option value="text">✏️ Estado de Texto con Fondo de Color</option>
+                            <option value="image">📷 Foto / Oferta de Producto de Tienda</option>
+                        </select>
+                    </div>
+
+                    <!-- Modo Texto -->
+                    <div id="statusTextGroup">
+                        <div class="form-group">
+                            <label>Texto del Estado:</label>
+                            <textarea class="form-control font-inter-black" id="statusInputText" rows="3" placeholder="¿Qué estás pensando o promocionando hoy?"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Color de Fondo (Gradiente Instagram / BBQ):</label>
+                            <div class="color-picker-grid">
+                                <button type="button" class="color-chip active" data-color="linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)" style="background:linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);"></button>
+                                <button type="button" class="color-chip" data-color="linear-gradient(135deg, #11998e, #38ef7d)" style="background:linear-gradient(135deg, #11998e, #38ef7d);"></button>
+                                <button type="button" class="color-chip" data-color="linear-gradient(135deg, #ff416c, #ff4b2b)" style="background:linear-gradient(135deg, #ff416c, #ff4b2b);"></button>
+                                <button type="button" class="color-chip" data-color="linear-gradient(135deg, #00c6ff, #0072ff)" style="background:linear-gradient(135deg, #00c6ff, #0072ff);"></button>
+                                <button type="button" class="color-chip" data-color="linear-gradient(135deg, #f857a6, #ff5858)" style="background:linear-gradient(135deg, #f857a6, #ff5858);"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modo Imagen / Cámara de Celular -->
+                    <div id="statusImageGroup" style="display:none;">
+                        <div class="form-group">
+                            <label class="font-inter-black">Cámara del Celular & Fotos de Galería:</label>
+                            
+                            <input type="file" id="statusFileInput" accept="image/*" style="display:none;" onchange="handleStatusPhotoSelected(event)">
+                            
+                            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                                <button type="button" class="btn-wa-primary" style="flex:1; background:var(--bbq-gradient-primary); border:1px solid #ef4444; color:#0b141a; font-size:0.8rem;" onclick="document.getElementById('statusFileInput').click()">
+                                    <i class="bi bi-camera-fill"></i> 📷 Galería / Cámara
+                                </button>
+                                <button type="button" class="btn-wa-secondary" style="flex:1; font-size:0.8rem;" onclick="handleSimulateCameraSnapshot()">
+                                    📸 Foto Instantánea
+                                </button>
+                            </div>
+
+                            <!-- Preview Box -->
+                            <div id="statusPhotoPreviewBox" style="display:none; text-align:center; padding:10px; background:var(--wa-header-bg); border-radius:12px; border:1px solid var(--wa-border-light); margin-bottom:10px;">
+                                <img id="statusPhotoPreviewImg" src="" alt="Previsualización" style="max-height:160px; border-radius:10px; object-fit:contain;">
+                                <div style="font-size:0.7rem; color:var(--wa-green); margin-top:4px;">✓ Foto cargada lista para publicar</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="font-inter-black">O URL de Imagen Externa / Emoji:</label>
+                            <input type="text" class="form-control font-inter-light" id="statusInputImageUrl" placeholder="https://ejemplo.com/oferta.jpg o 🎧, ⌚">
+                        </div>
+                        <div class="form-group">
+                            <label class="font-inter-black">Título / Mensaje de la Historia:</label>
+                            <input type="text" class="form-control font-inter-light" id="statusInputCaption" placeholder="¡Oferta Relámpago en TechZone Store!">
+                        </div>
+                        <div class="form-group">
+                            <label class="font-inter-black">Vincular Producto de Mi Tienda (Opcional):</label>
+                            <select class="form-control font-inter-light" id="statusLinkProductSelect">
+                                <option value="">-- Sin Producto Vinculado --</option>
+                                <option value="prod_hi_fi">Auriculares Wireless Hi-Fi ($100.00)</option>
+                                <option value="prod_watch">Smartwatch P2P Pro ($149.99)</option>
+                            </select>
+                        </div>
+                    </div>
+
+
+                    <button type="submit" class="btn-wa-primary" style="width:100%; margin-top:10px;">
+                        <i class="bi bi-send-fill"></i> Publicar en Mis Estados BBQ
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal VISOR DE HISTORIAS A PANTALLA COMPLETA ESTILO INSTAGRAM 📺 -->
+    <div class="instagram-story-viewer-overlay" id="modalStatusViewer" style="display:none;">
+        <div class="story-player-container">
+            
+            <!-- Barras de Progreso Segmentadas Superior -->
+            <div class="story-progress-bar-container" id="storyProgressSegments">
+                <!-- Injected dynamically by JS -->
+            </div>
+
+            <!-- Cabecera del Visor de Historia -->
+            <div class="story-player-header">
+                <div class="story-author-info">
+                    <div class="story-author-avatar" id="storyViewerAvatar">🏬</div>
+                    <div>
+                        <div class="story-author-name font-inter-black" id="storyViewerName">TechZone Store</div>
+                        <div class="story-author-time font-inter-light" id="storyViewerTime">Hace 15 min</div>
+                    </div>
+                </div>
+                <button class="story-close-btn" onclick="closeStatusViewer()"><i class="bi bi-x-lg"></i></button>
+            </div>
+
+            <!-- Canvas Principal del Contenido de la Historia -->
+            <div class="story-player-content" id="storyPlayerContent">
+                <!-- Dynamic Content (Image / Text with background) -->
+            </div>
+
+            <!-- Zona de Acción Directa: Botón de Compra para Historias de Tienda -->
+            <div class="story-action-drawer" id="storyActionDrawer" style="display:none;">
+                <button class="btn-story-buy font-inter-black" id="btnStoryBuyNow">
+                    <i class="bi bi-bag-check-fill"></i> 🛍️ Ver Producto & Comprar (Escrow $0 / Courier)
+                </button>
+            </div>
+
+            <!-- Zonas Táctiles para Avanzar / Retroceder -->
+            <div class="story-touch-zone left" onclick="prevStorySlide()"></div>
+            <div class="story-touch-zone right" onclick="nextStorySlide()"></div>
+            
+            <!-- Responder & Reaccionar a Historia -->
+            <div class="story-reply-footer" style="flex-direction:column; gap:6px;">
+                <div class="emoji-reaction-pill-bar" style="width:100%; justify-content:space-around; background:rgba(0,0,0,0.4);">
+                    <button class="emoji-btn-chip" onclick="handleSendStoryReaction('❤️')">❤️</button>
+                    <button class="emoji-btn-chip" onclick="handleSendStoryReaction('🔥')">🔥</button>
+                    <button class="emoji-btn-chip" onclick="handleSendStoryReaction('👏')">👏</button>
+                    <button class="emoji-btn-chip" onclick="handleSendStoryReaction('😮')">😮</button>
+                    <button class="emoji-btn-chip" onclick="handleSendStoryReaction('🛒')">🛒</button>
+                </div>
+                <div style="display:flex; gap:6px; width:100%;">
+                    <input type="text" id="storyReplyInput" class="story-reply-input font-inter-light" placeholder="Responder a la historia...">
+                    <button class="story-reply-send" onclick="sendStoryReply()"><i class="bi bi-send-fill"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: TRANSMISIÓN EN VIVO P2P - EMISOR / HOST 📹 -->
+    <div class="wa-modal-overlay" id="modalLiveBroadcastHost">
+        <div class="wa-modal-box" style="padding:0; max-width:440px; height:85vh; background:#000; overflow:hidden; border-radius:24px; border:2px solid var(--wa-green);">
+            <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between;">
+                
+                <!-- Overlay Header Host -->
+                <div style="position:absolute; top:12px; left:12px; right:12px; display:flex; justify-content:space-between; align-items:center; z-index:2100; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); padding:8px 12px; border-radius:20px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <span class="live-badge-tag"><i class="bi bi-circle-fill" style="font-size:0.5rem;"></i> EN VIVO P2P</span>
+                        <span class="font-inter-black" style="font-size:0.75rem; color:#fff;" id="hostLiveViewerCount">👥 28 Espectadores</span>
+                    </div>
+                    <button class="story-close-btn" onclick="handleEndLiveHost()"><i class="bi bi-x-lg"></i></button>
+                </div>
+
+                <!-- Live Stream Canvas / Video -->
+                <video id="hostLiveVideoElement" class="live-video-player" autoplay playsinline muted></video>
+
+                <!-- Floating Emoji Reactions Container -->
+                <div class="floating-emoji-container" id="hostFloatingEmojiContainer"></div>
+
+                <!-- Overlay Bottom Controls Host -->
+                <div style="position:absolute; bottom:12px; left:12px; right:12px; z-index:2100; display:flex; flex-direction:column; gap:8px;">
+                    
+                    <!-- Status Indicator for Recording -->
+                    <div id="hostRecordStatusPill" style="display:none; background:rgba(239, 68, 68, 0.2); border:1px solid #ef4444; color:#ef4444; text-align:center; padding:4px; border-radius:12px; font-size:0.72rem; font-weight:bold;">
+                        ⏺️ GRABANDO TRANSMISIÓN DE PANTALLA EN VIVO
+                    </div>
+
+                    <div class="live-action-btn-bar" style="justify-content:space-around;">
+                        <button class="btn-wa-primary" style="font-size:0.75rem; padding:6px 12px; background:#ef4444;" id="btnHostToggleRecord" onclick="handleToggleLiveRecord()">
+                            ⏺️ Grabar Vivo
+                        </button>
+                        <button class="btn-wa-secondary" style="font-size:0.75rem; padding:6px 12px;" onclick="handleHostPinProductPrompt()">
+                            📌 Fijar Producto
+                        </button>
+                        <button class="btn-wa-secondary" style="font-size:0.75rem; padding:6px 12px;" onclick="handleHostFlipCamera()">
+                            🔄 Cámara
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: TRANSMISIÓN EN VIVO P2P - ESPECTADOR / BUYER 📺 -->
+    <div class="wa-modal-overlay" id="modalLiveBroadcastViewer">
+        <div class="wa-modal-box" style="padding:0; max-width:440px; height:85vh; background:#000; overflow:hidden; border-radius:24px; border:2px solid var(--wa-green);">
+            <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between;">
+                
+                <!-- Overlay Header Viewer -->
+                <div style="position:absolute; top:12px; left:12px; right:12px; display:flex; justify-content:space-between; align-items:center; z-index:2100; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); padding:8px 12px; border-radius:20px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <span class="live-badge-tag"><i class="bi bi-circle-fill" style="font-size:0.5rem;"></i> VIVO P2P</span>
+                        <div class="font-inter-black" style="font-size:0.8rem; color:#fff;" id="viewerLiveHostTitle">TechZone Store 🏬</div>
+                    </div>
+                    <button class="story-close-btn" onclick="closeLiveViewer()"><i class="bi bi-x-lg"></i></button>
+                </div>
+
+                <!-- Video Element Espectador -->
+                <video id="viewerLiveVideoElement" class="live-video-player" autoplay playsinline></video>
+
+                <!-- Floating Emoji Reactions Container -->
+                <div class="floating-emoji-container" id="viewerFloatingEmojiContainer"></div>
+
+                <!-- Card de Producto Fijado en Vivo -->
+                <div id="viewerPinnedProductCard" style="position:absolute; bottom:70px; left:12px; right:12px; z-index:2100; background:rgba(18, 27, 34, 0.92); border:1px solid var(--wa-green); backdrop-filter:blur(10px); padding:10px; border-radius:16px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div style="font-size:2rem;">🎧</div>
+                        <div>
+                            <div class="font-inter-black" style="font-size:0.85rem; color:#fff;">Auriculares Hi-Fi Wireless Pro</div>
+                            <div class="font-inter-light" style="font-size:0.75rem; color:var(--wa-green); font-weight:bold;">$100.00 USD (Envío $15 / Retiro $0)</div>
+                        </div>
+                    </div>
+                    <button class="btn-wa-primary" style="font-size:0.75rem; padding:8px 12px;" onclick="closeLiveViewer(); openCatalogModal();">
+                        🛍️ Comprar
+                    </button>
+                </div>
+
+                <!-- Live Chat & Quick Emoji Bar Viewer -->
+                <div style="position:absolute; bottom:12px; left:12px; right:12px; z-index:2100; display:flex; gap:8px; align-items:center;">
+                    <div class="emoji-reaction-pill-bar">
+                        <button class="emoji-btn-chip" onclick="handleSendLiveEmoji('❤️')">❤️</button>
+                        <button class="emoji-btn-chip" onclick="handleSendLiveEmoji('🔥')">🔥</button>
+                        <button class="emoji-btn-chip" onclick="handleSendLiveEmoji('👏')">👏</button>
+                        <button class="emoji-btn-chip" onclick="handleSendLiveEmoji('😮')">😮</button>
+                        <button class="emoji-btn-chip" onclick="handleSendLiveEmoji('🛍️')">🛍️</button>
+                    </div>
+                    <input type="text" id="viewerLiveChatInput" class="form-control font-inter-light" placeholder="Comentar en vivo..." style="flex:1; border-radius:20px; font-size:0.78rem;" onkeypress="if(event.key==='Enter') handleSendLiveChatMessage()">
+                    <button class="btn-wa-primary" style="border-radius:50%; width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="handleSendLiveChatMessage()"><i class="bi bi-send-fill"></i></button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="js/storage-engine.js"></script>
+    <script src="js/p2p-node.js"></script>
+    <script src="js/logistics-engine.js"></script>
+    <script src="js/ai-orchestrator.js"></script>
+    <script src="js/escrow-engine.js"></script>
+    <script src="js/referral-engine.js"></script>
+    <script src="js/automation-engine.js"></script>
+    <script src="js/p2p-live-engine.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>
+
