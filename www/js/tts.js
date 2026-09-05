@@ -89,10 +89,35 @@
         _load() {
             if (this._mod) return Promise.resolve(this._mod);
             if (!this.loading) {
-                this.loading = import('https://esm.run/@mintplex-labs/piper-tts-web@1.0.5')
-                    .then(m => { this._mod = m.default || m; return this._mod; });
+                this.loading = (async () => {
+                    // Best-effort: configurar onnxruntime-web (1 hilo, sin SharedArrayBuffer,
+                    // ruta de wasm en CDN) por si Piper comparte esta instancia.
+                    try {
+                        const ortMod = await import('https://esm.run/onnxruntime-web');
+                        const ORT = ortMod.default || ortMod;
+                        if (ORT && ORT.env && ORT.env.wasm) {
+                            ORT.env.wasm.numThreads = 1;
+                            ORT.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
+                        }
+                    } catch (e) { /* seguimos igual */ }
+                    const m = await import('https://esm.run/@mintplex-labs/piper-tts-web@1.0.5');
+                    this._mod = m.default || m;
+                    return this._mod;
+                })();
             }
             return this.loading;
+        },
+
+        // Respaldo: hablar con la mejor voz del sistema en español.
+        _systemFallback(text) {
+            try {
+                if (!window.speechSynthesis) return;
+                const sv = (window.BBQTTS && window.BBQTTS._voices || []).find(v => (v.lang || '').toLowerCase().startsWith('es'));
+                speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                if (sv) { u.voice = sv; u.lang = sv.lang; }
+                speechSynthesis.speak(u);
+            } catch (e) {}
         },
 
         // Lista para el panel (sin descargar nada).
@@ -116,7 +141,9 @@
                 await a.play();
                 return true;
             } catch (e) {
-                if (window.bbqToast) window.bbqToast('Voz neural: ' + (e && e.message || e));
+                console.warn('[Piper] falló, uso voz del sistema:', e);
+                if (window.bbqToast) window.bbqToast('Voz neural no disponible acá; uso la del sistema.');
+                this._systemFallback(text); // que siempre hable algo
                 return false;
             }
         }
