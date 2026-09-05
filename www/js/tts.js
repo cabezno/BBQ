@@ -171,7 +171,11 @@
                 <div style="font-weight:900; font-size:1.05rem;">🔊 Voces del dispositivo (${voices.length})</div>
                 <button onclick="document.getElementById('bbqVoicesPanel').remove()" style="background:none; border:none; color:var(--wa-text-secondary); font-size:1.3rem; cursor:pointer;">✕</button>
             </div>
-            <div style="font-size:0.72rem; color:var(--wa-text-secondary); margin-bottom:8px;">Tocá ▶️ para escuchar; elegí una para usar en la app.</div>
+            <div style="font-size:0.72rem; color:var(--wa-text-secondary); margin-bottom:8px;">Elegí una voz (radio), después escribí abajo y tocá 🔊 para probarla con cualquier texto.</div>
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <input id="bbqTtsTest" type="text" value="Hola, así suena la voz elegida en BBQ." style="flex:1; padding:10px; border-radius:10px; border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); font-size:0.85rem; outline:none;">
+                <button onclick="window.BBQTTS.speak(document.getElementById('bbqTtsTest').value)" style="border:none; background:var(--wa-green); color:#0b141a; border-radius:10px; padding:0 14px; font-weight:900; cursor:pointer;">🔊</button>
+            </div>
             <div style="overflow-y:auto; flex:1;">
                 ${neuralHeader}${neuralSection}
                 ${rows ? '<div style="font-size:0.72rem; font-weight:700; color:var(--wa-text-secondary); margin:10px 0 2px;">Voces del sistema</div>' : ''}
