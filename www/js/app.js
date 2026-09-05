@@ -235,6 +235,35 @@ function handleLaunchNativeAiApp(provider) {
 /* ==========================================================================
    3. AI AUTOMATIONS ENGINE HANDLERS
    ========================================================================== */
+// Crear una automatización con el modelo on-device (acotado: mapea a {trigger, action} fijos).
+async function handleAiWorkflowRule() {
+    const input = document.getElementById('aiWfInput');
+    const status = document.getElementById('aiWfStatus');
+    const desc = (input && input.value || '').trim();
+    if (!desc) { if (status) status.textContent = 'Escribí una descripción.'; return; }
+    if (!window.WorkflowAI || !window.WorkflowAI.supported()) {
+        if (status) { status.style.color = '#f59e0b'; status.textContent = '⚠️ Tu dispositivo no soporta IA on-device (WebGPU). Probá un Android/Chrome reciente.'; }
+        return;
+    }
+    if (status) { status.style.color = 'var(--wa-text-secondary)'; status.textContent = '⏳ Cargando modelo on-device (la 1ª vez descarga ~350MB)...'; }
+    window.WorkflowAI.onProgress = (p) => {
+        if (status) status.textContent = '⬇️ ' + (p && (p.text || ('Cargando ' + Math.round((p.progress || 0) * 100) + '%')) || 'Cargando...');
+    };
+    try {
+        const rule = await window.WorkflowAI.describeRuleToWorkflow(desc);
+        if (!rule) {
+            if (status) { status.style.color = '#f59e0b'; status.textContent = 'No pude mapearlo a una regla conocida. Probá describirlo de otra forma.'; }
+            return;
+        }
+        window.automationEngine.addRule(rule.name, desc, rule.trigger, rule.action);
+        renderAutomationsModal();
+        if (input) input.value = '';
+        if (status) { status.style.color = '#22c55e'; status.textContent = `✅ Regla creada: ${rule.trigger} → ${rule.action}`; }
+    } catch (e) {
+        if (status) { status.style.color = '#f87171'; status.textContent = '⚠️ ' + e.message; }
+    }
+}
+
 function renderAutomationsModal() {
     const container = document.getElementById('automationsList');
     if (!container) return;

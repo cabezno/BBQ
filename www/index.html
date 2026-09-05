@@ -379,6 +379,17 @@
                     Reglas autónomas que la IA ejecuta en segundo plano dentro de la app para gestionar la tienda.
                 </p>
 
+                <!-- Crear regla con IA on-device (modelo chico en el teléfono, acotado) -->
+                <div style="background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:12px; margin-bottom:14px;">
+                    <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px;">✨ Crear con IA local (on-device)</div>
+                    <div style="font-size:0.72rem; color:var(--wa-text-secondary); margin-bottom:8px;">
+                        Describí la automatización en tus palabras. El modelo corre en tu teléfono, sin internet (la 1ª vez descarga ~350&nbsp;MB).
+                    </div>
+                    <textarea id="aiWfInput" rows="2" class="form-control" placeholder="Ej: cuando entre un pago, avisá al repartidor"></textarea>
+                    <button class="btn-wa-primary" style="width:100%; margin-top:8px; font-size:0.85rem;" onclick="handleAiWorkflowRule()">✨ Generar regla con IA local</button>
+                    <div id="aiWfStatus" style="font-size:0.75rem; color:var(--wa-text-secondary); margin-top:8px; min-height:18px;"></div>
+                </div>
+
                 <div id="automationsList">
                     <!-- Dynamic Rules Render -->
                 </div>
@@ -1217,6 +1228,7 @@
     <script src="js/automation-engine.js"></script>
     <script src="js/p2p-live-engine.js"></script>
     <script src="js/call-engine.js"></script>
+    <script src="js/workflow-ai.js"></script>
     <script src="js/onboarding.js"></script>
     <script src="js/app.js"></script>
     <script src="js/bbq-integration.js"></script>

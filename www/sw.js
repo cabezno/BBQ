@@ -3,7 +3,7 @@
  * Cache-first strategy for static assets, network-first for API/WS
  */
 
-const CACHE_NAME = 'bbq-pwa-v12';
+const CACHE_NAME = 'bbq-pwa-v13';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -23,6 +23,7 @@ const STATIC_ASSETS = [
     '/js/automation-engine.js',
     '/js/p2p-live-engine.js',
     '/js/call-engine.js',
+    '/js/workflow-ai.js',
     '/js/onboarding.js',
     '/js/app.js',
     '/js/bbq-integration.js',
@@ -83,10 +84,19 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
     // Skip WebSocket and API requests (never cache these)
-    if (url.pathname.startsWith('/ws') || 
+    if (url.pathname.startsWith('/ws') ||
         url.pathname.startsWith('/api/') ||
         event.request.url.startsWith('ws://') ||
         event.request.url.startsWith('wss://')) {
+        return;
+    }
+
+    // Skip la librería y los pesos del modelo on-device (WebLLM maneja su propia caché;
+    // son archivos enormes que no deben pasar por este cache).
+    if (url.hostname.includes('huggingface.co') ||
+        url.hostname.includes('esm.run') ||
+        url.href.includes('web-llm') ||
+        url.href.includes('mlc-ai')) {
         return;
     }
 
