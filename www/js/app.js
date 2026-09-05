@@ -218,6 +218,7 @@ async function handleTestLocalEndpoint() {
     if (window.bbqToast) window.bbqToast('Probando IA...');
     try {
         const res = await window.merchantAiOrchestrator.processIncomingMessage('Hola, ¿podés confirmarme que estás conectada?', 'test');
+        if (window.BBQTTS && res.replyText) window.BBQTTS.speak(res.replyText); // leer la respuesta en voz
         alert('🤖 Respuesta de la IA:\n\n' + (res.replyText || 'sin respuesta') +
               (res.real ? '\n\n✅ Proveedor real conectado.' : '\n\n(Asistente local por reglas — configurá un proveedor + API key para IA real.)'));
     } catch (e) {
@@ -478,6 +479,13 @@ function renderMobileChatList() {
     container.innerHTML = html;
 }
 
+// Escapa texto para meterlo en un atributo HTML (para el botón 🔊 de escuchar).
+function escAttr(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, ' ');
+}
+
 function renderMobileMessages() {
     const container = document.getElementById('mChatMessages');
     if (!container) return;
@@ -505,6 +513,7 @@ function renderMobileMessages() {
                     <div>${m.text}</div>
                     ${m.payloadCard ? renderPayloadCard(m.payloadCard) : ''}
                     <div class="msg-footer-meta">
+                        ${(m.text && !m.payloadCard) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
                         <span class="msg-timestamp">${formatTime(m.timestamp)}</span>
                         ${isOutgoing ? '<span class="wa-tick read">✓✓</span>' : ''}
                     </div>
