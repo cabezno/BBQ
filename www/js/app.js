@@ -601,9 +601,11 @@ function renderPayloadCard(card) {
                         <div class="voice-wave-bar" style="height:30%;"></div>
                         <div class="voice-wave-bar" style="height:70%;"></div>
                     </div>
-                    <div style="font-size:0.72rem; color:var(--wa-text-secondary); display:flex; justify-content:space-between;">
+                    <div style="font-size:0.72rem; color:var(--wa-text-secondary); display:flex; justify-content:space-between; align-items:center;">
                         <span>🎤 Nota de voz (${card.durationStr || '00:04'})</span>
+                        <button onclick="transcribeVoiceNote('${card.id}')" title="Transcribir" style="background:none; border:none; color:var(--wa-green); cursor:pointer; font-size:0.72rem; padding:0 4px;">📝</button>
                     </div>
+                    <div id="vnText_${card.id}" style="font-size:0.75rem; color:var(--wa-text-primary); margin-top:4px;"></div>
                 </div>
             </div>
         `;
@@ -2691,6 +2693,24 @@ function bbqBlobToBase64(blob) {
         r.onloadend = () => resolve(r.result);
         r.readAsDataURL(blob);
     });
+}
+
+// Transcribe una nota de voz con Whisper on-device y muestra el texto debajo.
+async function transcribeVoiceNote(id) {
+    const out = document.getElementById('vnText_' + id);
+    if (out) { out.style.color = 'var(--wa-text-secondary)'; out.textContent = '📝 Transcribiendo (la 1ª vez descarga ~40MB)...'; }
+    try {
+        const blob = await window.BBQDB.get('messages', id);
+        if (!blob) { if (out) out.textContent = 'Audio no disponible'; return; }
+        const text = await window.BBQSTT.transcribe(blob, (p) => {
+            if (out && p && p.status === 'progress' && typeof p.progress === 'number') {
+                out.textContent = '⬇️ Cargando modelo ' + Math.round(p.progress) + '%';
+            }
+        });
+        if (out) { out.style.color = 'var(--wa-text-primary)'; out.textContent = '📝 ' + (text || '(sin texto reconocido)'); }
+    } catch (e) {
+        if (out) { out.style.color = '#f87171'; out.textContent = 'No se pudo transcribir: ' + e.message; }
+    }
 }
 
 async function handlePlayVoiceNote(noteId) {
