@@ -14,23 +14,23 @@
         if (overlay) return overlay;
         overlay = document.createElement('div');
         overlay.id = 'bbqOnboardingOverlay';
-        overlay.style.cssText = `position:fixed; inset:0; z-index:200000; background:#0b141a;
+        overlay.style.cssText = `position:fixed; inset:0; z-index:200000; background:var(--wa-dark-bg);
             display:flex; align-items:center; justify-content:center; padding:24px;
             font-family:Inter,system-ui,sans-serif;`;
         overlay.innerHTML = `
-            <div style="max-width:360px; width:100%; text-align:center; color:#e9edef;">
+            <div style="max-width:360px; width:100%; text-align:center; color:var(--wa-text-primary);">
                 <div style="font-size:3rem; margin-bottom:8px;">🔥</div>
                 <div style="font-size:1.6rem; font-weight:900; margin-bottom:4px;">Bienvenido a BBQ</div>
-                <div style="font-size:0.85rem; color:#8696a0; margin-bottom:24px;">
+                <div style="font-size:0.85rem; color:var(--wa-text-secondary); margin-bottom:24px;">
                     Mensajería y comercio P2P. Tus datos viven en tu teléfono.
                 </div>
                 <input id="bbqOnbName" type="text" placeholder="Tu nombre"
-                    style="width:100%; padding:14px; margin-bottom:12px; border-radius:12px; border:1px solid #2a3942;
-                    background:#111b21; color:#e9edef; font-size:1rem; outline:none;">
+                    style="width:100%; padding:14px; margin-bottom:12px; border-radius:12px; border:1px solid var(--wa-border-light);
+                    background:var(--wa-header-bg); color:var(--wa-text-primary); font-size:1rem; outline:none;">
                 <input id="bbqOnbPhone" type="tel" placeholder="Tu número (ej: +54 9 11 5555-1234)"
-                    style="width:100%; padding:14px; margin-bottom:8px; border-radius:12px; border:1px solid #2a3942;
-                    background:#111b21; color:#e9edef; font-size:1rem; outline:none;">
-                <div style="font-size:0.7rem; color:#667781; margin-bottom:20px; text-align:left;">
+                    style="width:100%; padding:14px; margin-bottom:8px; border-radius:12px; border:1px solid var(--wa-border-light);
+                    background:var(--wa-header-bg); color:var(--wa-text-primary); font-size:1rem; outline:none;">
+                <div style="font-size:0.7rem; color:var(--wa-text-secondary); margin-bottom:20px; text-align:left;">
                     🔒 Tu identidad se genera con una clave segura atada a este teléfono. El número solo
                     sirve para que tus contactos te encuentren.
                 </div>

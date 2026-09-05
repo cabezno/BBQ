@@ -179,7 +179,7 @@ class CallEngine {
     _buildUI(mode, callerName) {
         let ov = document.getElementById('bbqCallOverlay');
         if (!ov) { ov = document.createElement('div'); ov.id = 'bbqCallOverlay'; document.body.appendChild(ov); }
-        ov.style.cssText = `position:fixed; inset:0; z-index:250000; background:#0b141a; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:44px 20px; font-family:Inter,system-ui,sans-serif; color:#e9edef;`;
+        ov.style.cssText = `position:fixed; inset:0; z-index:250000; background:var(--wa-dark-bg); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:44px 20px; font-family:Inter,system-ui,sans-serif; color:var(--wa-text-primary);`;
         const name = this._name(this.peerId) || callerName || 'Contacto';
         const videoArea = this.withVideo
             ? `<video id="bbqCallRemoteVideo" autoplay playsinline style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; z-index:1;"></video>
@@ -192,7 +192,7 @@ class CallEngine {
                  <button onclick="window.BBQCall.accept()" style="width:64px;height:64px;border-radius:50%;border:none;background:#22c55e;color:#fff;font-size:1.6rem;cursor:pointer;">📞</button>
                </div>`
             : `<div style="display:flex; gap:24px; z-index:3;">
-                 <button id="bbqCallMute" onclick="window.BBQCall.toggleMute()" style="width:56px;height:56px;border-radius:50%;border:none;background:#2a3942;color:#fff;font-size:1.3rem;cursor:pointer;">🎤</button>
+                 <button id="bbqCallMute" onclick="window.BBQCall.toggleMute()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--wa-incoming-bg);color:var(--wa-text-primary);font-size:1.3rem;cursor:pointer;">🎤</button>
                  <button onclick="window.BBQCall.endCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:#ef4444;color:#fff;font-size:1.4rem;cursor:pointer;">📵</button>
                </div>`;
 
@@ -205,7 +205,7 @@ class CallEngine {
             <div style="z-index:3; text-align:center; margin-top:30px;">
                 <div style="font-size:4rem;">${this._avatar(this.peerId)}</div>
                 <div style="font-size:1.5rem; font-weight:900; margin-top:10px;">${name}</div>
-                <div style="font-size:0.95rem; color:#8696a0; margin-top:6px;">${status}</div>
+                <div style="font-size:0.95rem; color:var(--wa-text-secondary); margin-top:6px;">${status}</div>
             </div>
             ${!this.withVideo ? videoArea : ''}
             ${controls}

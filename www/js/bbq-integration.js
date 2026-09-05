@@ -130,17 +130,17 @@
             m.style.cssText = `position:fixed; inset:0; z-index:150000; background:rgba(0,0,0,0.7);
                 display:none; align-items:flex-end; justify-content:center; font-family:Inter,system-ui,sans-serif;`;
             m.innerHTML = `
-                <div style="background:#111b21; width:100%; max-width:440px; border-radius:20px 20px 0 0; padding:20px; color:#e9edef;">
+                <div style="background:var(--wa-header-bg); width:100%; max-width:440px; border-radius:20px 20px 0 0; padding:20px; color:var(--wa-text-primary);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                         <div style="font-size:1.1rem; font-weight:900;">Agregar contacto</div>
-                        <button id="bbqAddClose" style="background:none; border:none; color:#8696a0; font-size:1.4rem; cursor:pointer;">✕</button>
+                        <button id="bbqAddClose" style="background:none; border:none; color:var(--wa-text-secondary); font-size:1.4rem; cursor:pointer;">✕</button>
                     </div>
                     <input id="bbqAddPhone" type="tel" placeholder="Número (ej: +54 9 11 5555-1234)"
-                        style="width:100%; padding:13px; margin-bottom:10px; border-radius:12px; border:1px solid #2a3942; background:#0b141a; color:#e9edef; font-size:1rem; outline:none;">
+                        style="width:100%; padding:13px; margin-bottom:10px; border-radius:12px; border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); font-size:1rem; outline:none;">
                     <button id="bbqAddSearch" style="width:100%; padding:13px; border-radius:12px; border:none; cursor:pointer; background:linear-gradient(90deg,#f59e0b,#f97316); color:#0b141a; font-weight:900; margin-bottom:10px;">
                         Buscar en BBQ y agregar
                     </button>
-                    <button id="bbqImportAgenda" style="width:100%; padding:12px; border-radius:12px; border:1px solid #2a3942; cursor:pointer; background:#0b141a; color:#e9edef; font-weight:600; margin-bottom:8px;">
+                    <button id="bbqImportAgenda" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--wa-border-light); cursor:pointer; background:var(--wa-dark-bg); color:var(--wa-text-primary); font-weight:600; margin-bottom:8px;">
                         📇 Importar de mi agenda
                     </button>
                     <div id="bbqAddResult" style="font-size:0.85rem; min-height:20px; margin-top:6px;"></div>
