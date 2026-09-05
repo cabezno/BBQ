@@ -182,6 +182,22 @@ app.post('/api/ai', async (req, res) => {
     }
 });
 
+// ── Cobro (stub para Google Pay). ─────────────────────────────
+// Recibe el token de Google Pay. En TEST no cobra. Para producción, integrar una
+// pasarela (Mercado Pago/Stripe/…) acá con su clave secreta (nunca en el cliente),
+// incluyendo el Auth & Hold del escrow (ej: Stripe captura manual).
+app.post('/api/pay', async (req, res) => {
+    const { amount, token, concept } = req.body || {};
+    console.log(`[PAY] (TEST) solicitud de cobro: $${amount} — ${concept || ''} — token:${token ? 'sí' : 'no'}`);
+    res.json({
+        ok: true,
+        mode: 'TEST',
+        charged: false,
+        message: 'Modo TEST: sin cobro real. Configurá una pasarela para producción.',
+        amount: amount || 0
+    });
+});
+
 // ── Estado del servidor ──
 app.get('/api/status', (req, res) => {
     res.json({

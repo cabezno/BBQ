@@ -53,6 +53,18 @@ class GooglePayEngine {
         }
     }
 
+    // Crea el cliente de Google Pay si el SDK (pay.js) ya cargó. Idempotente.
+    _ensureClient() {
+        if (this.paymentsClient) return;
+        if (window.google && window.google.payments && window.google.payments.api) {
+            try {
+                this.paymentsClient = new google.payments.api.PaymentsClient({ environment: 'TEST' });
+            } catch (e) {
+                console.warn('[GOOGLE PAY] init:', e);
+            }
+        }
+    }
+
     getGoogleIsReadyToPayRequest() {
         return Object.assign(
             {},
@@ -85,27 +97,33 @@ class GooglePayEngine {
     async processPayment(amount, description = 'Compra BBQ P2P', deliveryMode = 'COURIER') {
         const totalAmount = typeof amount === 'number' ? amount : parseFloat(amount);
 
-        // If Google Pay client is ready and window.google is defined
+        // pay.js carga async: crear el cliente ahora si ya está disponible.
+        this._ensureClient();
+
+        // Hoja de Google Pay REAL (muestra las tarjetas del Google Wallet del teléfono).
         if (this.paymentsClient && window.isSecureContext) {
             try {
-                const paymentDataRequest = this.getGooglePaymentDataRequest(totalAmount, description);
-                const paymentData = await this.paymentsClient.loadPaymentData(paymentDataRequest);
-                console.log('✅ [GOOGLE PAY EXITOSO]', paymentData);
-                return {
-                    success: true,
-                    paymentMethod: 'GOOGLE_PAY_SDK',
-                    transactionId: 'gpay_auth_' + Date.now(),
-                    raw: paymentData,
-                    totalAmount,
-                    description,
-                    deliveryMode
-                };
+                const ready = await this.paymentsClient.isReadyToPay(this.getGoogleIsReadyToPayRequest());
+                if (ready && ready.result) {
+                    const paymentDataRequest = this.getGooglePaymentDataRequest(totalAmount, description);
+                    const paymentData = await this.paymentsClient.loadPaymentData(paymentDataRequest);
+                    console.log('✅ [GOOGLE PAY] token recibido', paymentData);
+                    // NOTA: en TEST no se cobra. Para producción, mandar el token a /api/pay con tu pasarela.
+                    return {
+                        success: true,
+                        paymentMethod: 'GOOGLE_PAY_SDK',
+                        transactionId: 'gpay_auth_' + Date.now(),
+                        raw: paymentData,
+                        totalAmount,
+                        description,
+                        deliveryMode
+                    };
+                }
             } catch (err) {
-                if (err.statusCode === 'CANCELED') {
-                    console.log('⚠️ [GOOGLE PAY] Usuario canceló el pago.');
+                if (err && err.statusCode === 'CANCELED') {
                     return { success: false, message: 'Pago cancelado por el usuario.' };
                 }
-                console.warn('⚠️ [GOOGLE PAY SDK API] Fallback a Sandbox Sheet:', err);
+                console.warn('⚠️ [GOOGLE PAY] No disponible, usando hoja de respaldo:', err);
             }
         }
 
