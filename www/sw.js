@@ -3,7 +3,7 @@
  * Cache-first strategy for static assets, network-first for API/WS
  */
 
-const CACHE_NAME = 'bbq-pwa-v22';
+const CACHE_NAME = 'bbq-pwa-v23';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -98,7 +98,12 @@ self.addEventListener('fetch', (event) => {
     if (url.hostname.includes('huggingface.co') ||
         url.hostname.includes('esm.run') ||
         url.href.includes('web-llm') ||
-        url.href.includes('mlc-ai')) {
+        url.href.includes('mlc-ai') ||
+        url.href.includes('onnxruntime') ||
+        url.href.includes('ort-wasm') ||
+        url.href.includes('piper') ||
+        url.pathname.endsWith('.wasm') ||
+        url.pathname.endsWith('.onnx')) {
         return;
     }
 

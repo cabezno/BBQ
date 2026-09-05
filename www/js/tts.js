@@ -71,75 +71,49 @@
     BBQTTS.init();
     window.BBQTTS = BBQTTS;
 
-    // ── Voz neural on-device (Kokoro-82M) — mucho mejor calidad, offline ──
+    // ── Voz neural on-device (Piper) — voces en ESPAÑOL reales, offline ──
     window.BBQNeuralTTS = {
-        tts: null,
+        _mod: null,
         loading: null,
-        _lib: null,
-        _KokoroTTS: null,
-        _VOICES: null,
-        available: [],   // ids de voz REALES
-        modelId: 'onnx-community/Kokoro-82M-v1.0-ONNX',
-        // Sugeridas (se reemplazan por las reales al cargar el modelo).
+        DEFAULT: 'es_AR-daniela-high',
+        // Voces en español de Piper (se descarga un modelo por voz la 1ª vez).
         voices: [
-            { id: 'ef_dora', label: 'Dora — español (F)' },
-            { id: 'em_alex', label: 'Alex — español (M)' },
-            { id: 'em_santa', label: 'Santa — español (M)' }
+            { id: 'es_AR-daniela-high', name: 'Daniela (Argentina) 🇦🇷' },
+            { id: 'es_MX-claude-high', name: 'Claude (México)' },
+            { id: 'es_ES-sharvard-medium', name: 'Sharvard (España)' },
+            { id: 'es_ES-davefx-medium', name: 'Davefx (España)' },
+            { id: 'es_MX-ald-medium', name: 'Ald (México)' }
         ],
-        // Carga SOLO la librería (barato) y lee la lista de voces reales, sin bajar el modelo.
-        async _loadLib() {
-            if (this._lib) return this._lib;
-            this._lib = (async () => {
-                const mod = await import('https://esm.run/kokoro-js');
-                const KokoroTTS = mod.KokoroTTS || (mod.default && mod.default.KokoroTTS);
-                let V = {};
-                try { V = mod.VOICES || (KokoroTTS && KokoroTTS.VOICES) || {}; } catch (e) {}
-                this._KokoroTTS = KokoroTTS;
-                this._VOICES = V;
-                this.available = Object.keys(V);
-                console.log('[Kokoro] voces (' + this.available.length + '):', this.available);
-                // Si la voz elegida no existe, usar una en español (o la primera).
-                if (window.BBQTTS && this.available.length && !this.available.includes(window.BBQTTS.neuralVoice)) {
-                    window.BBQTTS.neuralVoice = this.available.find(v => v.toLowerCase().startsWith('e')) || this.available[0];
-                }
-                return { KokoroTTS, V };
-            })();
-            return this._lib;
-        },
-        async listVoices() { await this._loadLib(); return this._VOICES || {}; },
-        async ensure() {
-            if (this.tts) return this.tts;
+        get available() { return this.voices.map(v => v.id); },
+
+        _load() {
+            if (this._mod) return Promise.resolve(this._mod);
             if (!this.loading) {
-                this.loading = (async () => {
-                    const { KokoroTTS } = await this._loadLib();
-                    const device = (typeof navigator !== 'undefined' && navigator.gpu) ? 'webgpu' : 'wasm';
-                    this.tts = await KokoroTTS.from_pretrained(this.modelId, { dtype: 'q8', device });
-                    return this.tts;
-                })();
+                this.loading = import('https://esm.run/@mintplex-labs/piper-tts-web@1.0.5')
+                    .then(m => { this._mod = m.default || m; return this._mod; });
             }
             return this.loading;
         },
-        // Elegí una voz válida: la pedida si existe; si no, una en español; si no, la primera.
-        _pick(voiceId) {
-            const av = this.available || [];
-            if (!av.length) return voiceId;
-            if (av.includes(voiceId)) return voiceId;
-            const es = av.find(v => String(v).toLowerCase().startsWith('e'));
-            return es || av[0];
+
+        // Lista para el panel (sin descargar nada).
+        async listVoices() {
+            const meta = {};
+            for (const v of this.voices) meta[v.id] = { name: v.name, language: 'es' };
+            return meta;
         },
+
         async speak(text, voiceId) {
-            const first = !this.tts;
-            if (first && window.bbqToast) window.bbqToast('✨ Cargando voz neural (1ª vez ~80MB)...');
+            const first = !this._mod;
+            if (first && window.bbqToast) window.bbqToast('✨ Cargando voz neural (1ª vez descarga el modelo)...');
             try {
-                const tts = await this.ensure();
-                const v = this._pick(voiceId);
-                const audio = await tts.generate(text, { voice: v });
-                const blob = audio.toBlob();
+                const tts = await this._load();
+                let id = voiceId || (window.BBQTTS && window.BBQTTS.neuralVoice) || this.DEFAULT;
+                if (!this.available.includes(id)) { id = this.DEFAULT; if (window.BBQTTS) window.BBQTTS.neuralVoice = id; }
+                const blob = await tts.predict({ text, voiceId: id });
                 const url = URL.createObjectURL(blob);
                 const a = new Audio(url);
                 a.onended = () => URL.revokeObjectURL(url);
                 await a.play();
-                if (v !== voiceId && window.bbqToast) window.bbqToast('Voz usada: ' + v);
                 return true;
             } catch (e) {
                 if (window.bbqToast) window.bbqToast('Voz neural: ' + (e && e.message || e));
@@ -147,6 +121,10 @@
             }
         }
     };
+    // Migrar la voz elegida vieja (Kokoro) a una válida de Piper.
+    if (!window.BBQNeuralTTS.available.includes(BBQTTS.neuralVoice)) {
+        BBQTTS.neuralVoice = window.BBQNeuralTTS.DEFAULT;
+    }
 
     // Panel para ver/elegir/probar las voces del dispositivo.
     window.openVoicesPanel = async function () {
