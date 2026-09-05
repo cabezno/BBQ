@@ -1,0 +1,231 @@
+/**
+ * BBQ MOBILE - Servidor Mínimo (Directorio + Señalización)
+ *
+ * Filosofía: el servidor es lo más "tonto" posible. Solo hace dos cosas:
+ *   1) DIRECTORIO (guía telefónica): guarda { teléfono, nombre, peerId, publicKey }
+ *      para que, cuando agregás un contacto, la app sepa si ya tiene BBQ.
+ *   2) SEÑALIZACIÓN (transitoria): reenvía el "saludo" WebRTC (offer/answer/ICE)
+ *      entre dos peers para que se conecten. NO guarda ningún mensaje.
+ *
+ * Los mensajes, media, estados y vivos viajan P2P (WebRTC) y cifrados E2E.
+ * El servidor nunca ve el contenido.
+ *
+ * Uso: npm run server  →  http://<LAN-IP>:3000
+ */
+
+const express = require('express');
+const http = require('http');
+const { WebSocketServer, WebSocket } = require('ws');
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const DIRECTORY_FILE = path.join(__dirname, 'directory.json');
+
+app.use(express.json({ limit: '256kb' }));
+
+// ─── Static Files (la web app vive en /www) ─────────────────────
+app.use(express.static(path.join(__dirname, 'www'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('sw.js')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+        if (filePath.endsWith('.json')) {
+            res.setHeader('Content-Type', 'application/json');
+        }
+    }
+}));
+
+/* ══════════════════════════════════════════════════════════════
+   DIRECTORIO (guía telefónica persistente en JSON)
+   ══════════════════════════════════════════════════════════════ */
+let directory = {}; // phoneNormalized → { phone, name, peerId, publicKey, updatedAt }
+
+function loadDirectory() {
+    try {
+        if (fs.existsSync(DIRECTORY_FILE)) {
+            directory = JSON.parse(fs.readFileSync(DIRECTORY_FILE, 'utf8')) || {};
+            console.log(`\x1b[36m[DIR] Directorio cargado: ${Object.keys(directory).length} usuarios\x1b[0m`);
+        }
+    } catch (e) {
+        console.error('[DIR] Error cargando directorio:', e.message);
+        directory = {};
+    }
+}
+
+let saveTimer = null;
+function saveDirectory() {
+    // Debounce para no escribir en disco en cada request
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        try {
+            fs.writeFileSync(DIRECTORY_FILE, JSON.stringify(directory, null, 2));
+        } catch (e) {
+            console.error('[DIR] Error guardando directorio:', e.message);
+        }
+    }, 500);
+}
+
+// Normaliza un teléfono a solo dígitos (con código de país si viene con +)
+function normalizePhone(raw) {
+    if (!raw) return '';
+    let s = String(raw).trim().replace(/[^\d+]/g, '');
+    if (s.startsWith('+')) s = s.slice(1);
+    return s.replace(/\D/g, '');
+}
+
+// ── Registro / actualización de identidad ──
+// Body: { phone, name, peerId, publicKey }
+app.post('/api/register', (req, res) => {
+    const { phone, name, peerId, publicKey } = req.body || {};
+    const key = normalizePhone(phone);
+    if (!key || key.length < 6) {
+        return res.status(400).json({ ok: false, error: 'Teléfono inválido' });
+    }
+    directory[key] = {
+        phone: key,
+        name: (name || 'Usuario BBQ').toString().slice(0, 60),
+        peerId: (peerId || '').toString().slice(0, 128),
+        publicKey: (publicKey || '').toString().slice(0, 2048),
+        updatedAt: new Date().toISOString()
+    };
+    saveDirectory();
+    console.log(`\x1b[32m[DIR] Registrado: ${key} (${directory[key].name})\x1b[0m`);
+    res.json({ ok: true, user: directory[key] });
+});
+
+// ── Match de contactos: le paso mi agenda, me devuelve quiénes tienen BBQ ──
+// Body: { phones: ["+54911...", "..."] }
+app.post('/api/contacts/match', (req, res) => {
+    const phones = Array.isArray(req.body?.phones) ? req.body.phones : [];
+    const matches = [];
+    for (const p of phones.slice(0, 5000)) {
+        const key = normalizePhone(p);
+        if (key && directory[key]) {
+            const u = directory[key];
+            matches.push({ phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey });
+        }
+    }
+    res.json({ ok: true, matches });
+});
+
+// ── Lookup de un solo usuario ──
+app.get('/api/user/:phone', (req, res) => {
+    const key = normalizePhone(req.params.phone);
+    const u = directory[key];
+    if (!u) return res.status(404).json({ ok: false, error: 'No encontrado' });
+    res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey } });
+});
+
+// ── Estado del servidor ──
+app.get('/api/status', (req, res) => {
+    res.json({
+        status: 'ok',
+        serverTime: new Date().toISOString(),
+        usersRegistered: Object.keys(directory).length,
+        peersOnline: onlinePeers.size,
+        lanAddresses: getLanAddresses()
+    });
+});
+
+/* ══════════════════════════════════════════════════════════════
+   SEÑALIZACIÓN WebRTC (transitoria, no guarda mensajes)
+   ══════════════════════════════════════════════════════════════ */
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server, path: '/ws' });
+
+const onlinePeers = new Map(); // peerId → ws
+
+wss.on('connection', (ws, req) => {
+    let myPeerId = null;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    console.log(`\x1b[36m[WS] Conexión desde ${ip}\x1b[0m`);
+
+    ws.on('message', (raw) => {
+        let msg;
+        try { msg = JSON.parse(raw.toString()); } catch { return; }
+
+        // Registrar el peerId de esta conexión (para señalización dirigida)
+        if (msg.type === 'HELLO') {
+            myPeerId = msg.peerId;
+            if (myPeerId) {
+                onlinePeers.set(myPeerId, ws);
+                console.log(`\x1b[32m[WS] Online: ${myPeerId} (${onlinePeers.size} conectados)\x1b[0m`);
+                ws.send(JSON.stringify({ type: 'HELLO-ACK', peersOnline: onlinePeers.size }));
+            }
+            return;
+        }
+
+        if (msg.type === 'PING') {
+            ws.send(JSON.stringify({ type: 'PONG', ts: Date.now() }));
+            return;
+        }
+
+        // Señalización dirigida: SIGNAL { to, from, data }
+        // Reenvía el offer/answer/ICE al peer destino. No inspecciona el contenido.
+        if (msg.type === 'SIGNAL' && msg.to) {
+            const target = onlinePeers.get(msg.to);
+            if (target && target.readyState === WebSocket.OPEN) {
+                target.send(JSON.stringify(msg));
+            } else {
+                ws.send(JSON.stringify({ type: 'PEER-OFFLINE', to: msg.to }));
+            }
+            return;
+        }
+
+        // Presencia: ¿está online este peer?
+        if (msg.type === 'IS-ONLINE' && msg.peerId) {
+            ws.send(JSON.stringify({
+                type: 'PRESENCE',
+                peerId: msg.peerId,
+                online: onlinePeers.has(msg.peerId)
+            }));
+            return;
+        }
+    });
+
+    ws.on('close', () => {
+        if (myPeerId) {
+            onlinePeers.delete(myPeerId);
+            console.log(`\x1b[31m[WS] Offline: ${myPeerId} (${onlinePeers.size} conectados)\x1b[0m`);
+        }
+    });
+
+    ws.on('error', (err) => console.error('[WS] Error:', err.message));
+
+    const ping = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) ws.ping();
+        else clearInterval(ping);
+    }, 30000);
+});
+
+/* ══════════════════════════════════════════════════════════════
+   Arranque
+   ══════════════════════════════════════════════════════════════ */
+function getLanAddresses() {
+    const out = [];
+    const ifaces = os.networkInterfaces();
+    for (const name in ifaces) {
+        for (const iface of ifaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) out.push(iface.address);
+        }
+    }
+    return out;
+}
+
+loadDirectory();
+
+server.listen(PORT, '0.0.0.0', () => {
+    const lan = getLanAddresses();
+    console.log('\n\x1b[1m\x1b[32m' + '═'.repeat(60) + '\x1b[0m');
+    console.log('\x1b[1m\x1b[32m  🔥 BBQ - SERVIDOR MÍNIMO (Directorio + Señalización)\x1b[0m');
+    console.log('\x1b[1m\x1b[32m' + '═'.repeat(60) + '\x1b[0m');
+    console.log(`\n  📍 Local:      \x1b[36mhttp://localhost:${PORT}\x1b[0m`);
+    lan.forEach(ip => console.log(`  📱 Teléfonos:  \x1b[36mhttp://${ip}:${PORT}\x1b[0m`));
+    console.log(`\n  🔌 Señalización: \x1b[33mws://localhost:${PORT}/ws\x1b[0m`);
+    console.log(`  📇 Directorio:   \x1b[33mPOST /api/register · POST /api/contacts/match\x1b[0m`);
+    console.log(`  📊 Estado:       \x1b[33mGET /api/status\x1b[0m`);
+    console.log('\x1b[1m\x1b[32m' + '═'.repeat(60) + '\x1b[0m\n');
+});

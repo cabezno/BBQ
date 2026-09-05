@@ -21,7 +21,39 @@ class DualPhaseEscrowEngine {
             createdAt: new Date().toISOString()
         };
 
+        this.merchantWallet = {
+            pendingHeld: 115.00,
+            settledAvailable: 350.00,
+            totalPaidOut: 1200.00,
+            history: [
+                { id: 'tx_991', type: 'CHARGED_ESCROW', amount: 115.00, description: 'Auriculares Hi-Fi (Retención Google Pay)', status: 'HELD', date: new Date().toLocaleDateString() },
+                { id: 'tx_990', type: 'RELEASED_PAYOUT', amount: 350.00, description: 'Venta Teclado Mecánico RGB (Entregado)', status: 'AVAILABLE', date: new Date(Date.now() - 86400000).toLocaleDateString() }
+            ]
+        };
+
         this.generateSecretNonce();
+    }
+
+    getMerchantWallet() {
+        return this.merchantWallet;
+    }
+
+    withdrawMerchantBalance() {
+        if (this.merchantWallet.settledAvailable <= 0) {
+            return { success: false, message: 'No hay saldo disponible para retirar.' };
+        }
+        const amount = this.merchantWallet.settledAvailable;
+        this.merchantWallet.totalPaidOut += amount;
+        this.merchantWallet.settledAvailable = 0;
+        this.merchantWallet.history.unshift({
+            id: 'tx_' + Date.now().toString().slice(-4),
+            type: 'WITHDRAWAL',
+            amount: amount,
+            description: 'Retiro a cuenta bancaria / Google Wallet',
+            status: 'COMPLETED',
+            date: new Date().toLocaleDateString()
+        });
+        return { success: true, amount };
     }
 
     generateSecretNonce() {
@@ -97,6 +129,18 @@ class DualPhaseEscrowEngine {
 
         const merchantPayout = this.currentEscrow.productPrice;
         const courierPayout = isPickup ? 0.00 : this.currentEscrow.shippingFee;
+
+        // Update Merchant Wallet Balances
+        this.merchantWallet.pendingHeld = Math.max(0, this.merchantWallet.pendingHeld - merchantPayout);
+        this.merchantWallet.settledAvailable += merchantPayout;
+        this.merchantWallet.history.unshift({
+            id: 'tx_' + Date.now().toString().slice(-4),
+            type: 'RELEASED_PAYOUT',
+            amount: merchantPayout,
+            description: `Cobro liberado (${this.currentEscrow.productName || 'Venta Store'})`,
+            status: 'AVAILABLE',
+            date: new Date().toLocaleDateString()
+        });
 
         this.logEscrowEvent(`✅ [COINCIDENCIA CRIPTOGRÁFICA] Secreto $K_r$ verificado por ${scannerRole === 'merchant' ? 'VENDEDOR (RETIRO EN LOCAL)' : 'REPARTIDOR (COURIER)'}.`);
         this.logEscrowEvent(`💰 [LIQUIDACIÓN] $${merchantPayout.toFixed(2)} USD transferidos a la Tienda` + (!isPickup ? `, $${courierPayout.toFixed(2)} USD transferidos a Courier.` : ' ($0 cobro de envío).'));

@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BBQ - Mobile P2P Commerce, Local AI & Escrow</title>
     <!-- Metadatos de Aplicación Móvil Nativa (PWA / iOS / Android) -->
-    <meta name="theme-color" content="#121b22">
+    <meta name="theme-color" content="#f97316">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BBQ">
+    <meta name="description" content="BBQ Mobile P2P - Mensajería, Comercio con Escrow, IA Local y Vivos en tiempo real">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.svg">
     
     <!-- Google Fonts Inter (300, 400, 600, 900) & Bootstrap Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,9 +22,24 @@
 </head>
 <body class="mobile-body">
 
+    <!-- PWA INSTALL BANNER (Android beforeinstallprompt) -->
+    <div class="pwa-install-banner" id="pwaInstallBanner" style="display:none;">
+        <div class="pwa-install-content">
+            <i class="bi bi-fire bbq-gradient-icon" style="font-size:1.5rem;"></i>
+            <div>
+                <div class="font-inter-black" style="font-size:0.85rem;">Instalar BBQ en tu teléfono</div>
+                <div class="font-inter-light" style="font-size:0.72rem; color:var(--wa-text-secondary);">Acceso rápido desde la pantalla de inicio</div>
+            </div>
+        </div>
+        <div style="display:flex; gap:6px;">
+            <button class="btn-wa-secondary" id="btnPwaDismiss" style="font-size:0.72rem; padding:4px 8px;">Ahora no</button>
+            <button class="btn-wa-primary" id="btnPwaInstall" style="font-size:0.72rem; padding:4px 12px; background:var(--bbq-gradient-primary); border:1px solid #ef4444; color:#0b141a;">Instalar</button>
+        </div>
+    </div>
+
     <!-- BARRA SUPERIOR DE SIMULACIÓN Y CONTROL MÓVIL BBQ -->
     <div class="mobile-sim-header">
-        <div class="sim-title font-inter-black"><i class="bi bi-fire text-danger"></i> BBQ MOBILE P2P</div>
+        <div class="sim-title font-inter-black"><i class="bi bi-fire bbq-gradient-icon"></i> BBQ MOBILE P2P</div>
         <div class="sim-controls">
             <button class="sim-mode-btn active" id="btnToggleFrame" title="Cambiar Vista Marco de Teléfono / Pantalla Completa">
                 <i class="bi bi-phone"></i> Marco
@@ -59,8 +77,9 @@
                     
                     <!-- Header Superior Móvil BBQ (Logo Intacto) -->
                     <div class="mobile-header">
-                        <div class="mobile-brand font-inter-black"><i class="bi bi-fire text-danger"></i> BBQ</div>
+                        <div class="mobile-brand font-inter-black"><i class="bi bi-fire bbq-gradient-icon"></i> BBQ</div>
                         <div class="mobile-header-actions">
+                            <span class="ws-connection-pill conn-connecting" id="wsConnectionIndicator">🟡 Conectando...</span>
                             <button class="icon-btn-m" onclick="openModal('modalCreateStatus')" title="Crear Estado / Historia"><i class="bi bi-camera"></i></button>
                             <button class="icon-btn-m" onclick="toggleSearchBox()" title="Buscar"><i class="bi bi-search"></i></button>
                             <button class="icon-btn-m" id="btnMobileMenu" title="Opciones"><i class="bi bi-three-dots-vertical"></i></button>
@@ -81,6 +100,9 @@
                         </div>
                         <div class="wa-pop-item" onclick="openModal('modalCreateStore'); hidePopupMenu();">
                             <i class="bi bi-shop"></i> <span>Mi Tienda & Productos</span>
+                        </div>
+                        <div class="wa-pop-item" onclick="openMerchantChargeModal(); hidePopupMenu();">
+                            <i class="bi bi-credit-card-fill" style="color:var(--wa-green);"></i> <span>Cobrar a Cliente (Google Pay)</span>
                         </div>
                         <div class="wa-pop-item" onclick="openModal('modalAiSetup'); hidePopupMenu();">
                             <i class="bi bi-robot"></i> <span>Conectar IA & Port 9090</span>
@@ -529,12 +551,79 @@
                             <input type="number" class="form-control" id="prodInputShipping" placeholder="15.00" step="0.01">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Stock en Almacén:</label>
-                        <input type="number" class="form-control" id="prodInputStock" placeholder="12">
+                    <hr style="border-color:var(--wa-border-light); margin:16px 0;">
+                    
+                    <!-- Billetera y Resumen de Cobros de la Tienda -->
+                    <div style="background:rgba(245, 158, 11, 0.08); border:1px solid var(--wa-border-light); border-radius:14px; padding:12px; margin-bottom:14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div style="font-weight:bold; font-size:0.88rem; color:var(--wa-text-primary); display:flex; align-items:center; gap:6px;">
+                                <i class="bi bi-wallet2" style="color:#f59e0b;"></i> Billetera de Cobros Tienda
+                            </div>
+                            <button type="button" class="btn-wa-primary" style="font-size:0.72rem; padding:4px 10px;" onclick="openMerchantChargeModal();">
+                                ➕ Cobrar a Cliente
+                            </button>
+                        </div>
+                        <div style="display:flex; gap:10px; text-align:center;">
+                            <div style="flex:1; background:rgba(0,0,0,0.3); padding:8px; border-radius:10px;">
+                                <div style="font-size:0.68rem; color:var(--wa-text-secondary);">Retenido (Escrow)</div>
+                                <div style="font-size:0.95rem; font-weight:900; color:#38bdf8;" id="storeWalletHeld">$115.00 USD</div>
+                            </div>
+                            <div style="flex:1; background:rgba(0,0,0,0.3); padding:8px; border-radius:10px;">
+                                <div style="font-size:0.68rem; color:var(--wa-text-secondary);">Disponible</div>
+                                <div style="font-size:0.95rem; font-weight:900; color:#22c55e;" id="storeWalletAvailable">$350.00 USD</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-wa-secondary" style="width:100%; font-size:0.72rem; padding:6px; margin-top:8px;" onclick="handleWithdrawMerchantWallet()">
+                            💸 Retirar Fondos a Google Wallet / Banco
+                        </button>
                     </div>
+
                     <button type="submit" class="btn-wa-primary" style="width:100%; margin-top:10px;">
                         💾 Guardar Tienda & Publicar Catálogo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: COBRAR A CLIENTE CON GOOGLE PAY 💳 -->
+    <div class="wa-modal-overlay" id="modalMerchantCharge">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3 class="font-inter-black"><i class="bi bi-credit-card-fill bbq-gradient-icon"></i> Emitir Cobro / Factura (Google Pay)</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <form id="formMerchantCharge" onsubmit="event.preventDefault(); handleSendMerchantCharge();">
+                    <div class="form-group">
+                        <label>Cliente / Comprador Destino:</label>
+                        <select class="form-control" id="chargeInputClient">
+                            <option value="p2p_buyer_7721">Carlos Gómez (Comprador Chat Actual)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Concepto / Producto:</label>
+                        <input type="text" class="form-control" id="chargeInputConcept" placeholder="Ej: Servicio de Reparación / Producto Personalizado" required>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Monto ($ USD):</label>
+                            <input type="number" class="form-control" id="chargeInputAmount" placeholder="50.00" step="0.01" required>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Envío Courier ($):</label>
+                            <input type="number" class="form-control" id="chargeInputShipping" value="0.00" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Modalidad de Entrega:</label>
+                        <select class="form-control" id="chargeInputDelivery">
+                            <option value="PICKUP">🏪 Retiro Directo en Local ($0 Envío)</option>
+                            <option value="COURIER">🚚 Despacho por Courier Express</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-wa-primary" style="width:100%; margin-top:10px; padding:12px; font-size:0.88rem;">
+                        📤 Enviar Solicitud de Cobro con Google Pay al Chat
                     </button>
                 </form>
             </div>
@@ -640,6 +729,74 @@
             </div>
             <div class="wa-modal-body">
                 <div id="catalogModalContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: CHECKOUT DE PRODUCTO Y RETENCIÓN ESCROW (GOOGLE PAY) 🛍️ -->
+    <div class="wa-modal-overlay" id="modalProductCheckout">
+        <div class="wa-modal-box">
+            <div class="wa-modal-header">
+                <h3 class="font-inter-black"><i class="bi bi-cart-check-fill bbq-gradient-icon"></i> Checkout & Retención Escrow</h3>
+                <button class="icon-btn-m" onclick="closeModals()">✕</button>
+            </div>
+            <div class="wa-modal-body">
+                <!-- Tarjeta Resumen del Producto Seleccionado -->
+                <div style="background:rgba(255,255,255,0.05); border:1px solid var(--wa-border-light); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; gap:12px; align-items:center;">
+                    <div id="checkoutProdImage" style="width:54px; height:54px; border-radius:12px; background:#2a3942; display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:1.8rem; flex-shrink:0;">🎧</div>
+                    <div style="flex:1;">
+                        <h4 id="checkoutProdName" class="font-inter-black" style="font-size:0.92rem; margin-bottom:2px;">Auriculares Wireless Hi-Fi</h4>
+                        <div id="checkoutProdPrice" class="font-inter-black" style="font-size:0.88rem; color:#38bdf8;">$100.00 USD</div>
+                        <div id="checkoutProdStock" style="font-size:0.72rem; color:var(--wa-text-secondary);">Stock: 12 unidades disponibles</div>
+                    </div>
+                </div>
+
+                <!-- Selección Modalidad de Entrega -->
+                <div class="form-group">
+                    <label class="font-inter-black">Modalidad de Entrega:</label>
+                    <select class="form-control" id="checkoutDeliveryModeSelect" onchange="updateCheckoutTotalSummary()">
+                        <option value="COURIER">🚚 Despacho por Courier Express (+$15.00 USD)</option>
+                        <option value="PICKUP">🏪 Retiro en Local de la Tienda ($0.00 Envío)</option>
+                    </select>
+                </div>
+
+                <!-- Pasarela de Pago Google Pay -->
+                <div class="form-group">
+                    <label class="font-inter-black">Método de Pago & Retención Criptográfica:</label>
+                    <div style="background:rgba(66, 133, 244, 0.1); border:1px solid #4285f4; border-radius:12px; padding:10px; display:flex; align-items:center; justify-content:space-between;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-weight:900; background:linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:1.1rem;">GPay</span>
+                            <div>
+                                <div style="font-size:0.8rem; font-weight:bold;">Google Pay / Google Wallet</div>
+                                <div style="font-size:0.68rem; color:var(--wa-text-secondary);">Pre-autorización Auth & Hold (Escrow P2P)</div>
+                            </div>
+                        </div>
+                        <span style="color:#22c55e; font-size:0.8rem; font-weight:bold;">✓ Activo</span>
+                    </div>
+                </div>
+
+                <!-- Desglose de Totales -->
+                <div style="background:rgba(0,0,0,0.3); border:1px solid var(--wa-border); border-radius:12px; padding:12px; margin:14px 0;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:4px;">
+                        <span>Precio Producto:</span>
+                        <strong id="summaryProdSubtotal">$100.00 USD</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:6px;">
+                        <span>Costo de Envío Courier:</span>
+                        <strong id="summaryShippingFee">$15.00 USD</strong>
+                    </div>
+                    <hr style="border-color:var(--wa-border-light); margin:6px 0;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight:900;">
+                        <span>Total Retenido en Escrow:</span>
+                        <strong id="summaryTotalHeld" style="color:#38bdf8;">$115.00 USD</strong>
+                    </div>
+                </div>
+
+                <!-- Botón Confirmar Pago -->
+                <button type="button" id="btnConfirmProductCheckout" class="btn-wa-primary" style="width:100%; padding:14px; font-size:0.95rem; font-weight:900; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="executeProductCheckoutPayment()">
+                    <span style="font-weight:900; background:linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:1.1rem;">GPay</span>
+                    <span>Pagar & Generar QR Escrow</span>
+                </button>
             </div>
         </div>
     </div>
@@ -791,7 +948,7 @@
     <div class="wa-modal-overlay" id="modalCreateStatus">
         <div class="wa-modal-box">
             <div class="wa-modal-header">
-                <h3 class="font-inter-black"><i class="bi bi-camera-fill text-danger"></i> Crear Estado en BBQ</h3>
+                <h3 class="font-inter-black"><i class="bi bi-camera-fill bbq-gradient-icon"></i> Crear Estado en BBQ</h3>
                 <button class="icon-btn-m" onclick="closeModals()">✕</button>
             </div>
             <div class="wa-modal-body">
@@ -801,6 +958,7 @@
                         <select class="form-control" id="statusInputType" onchange="toggleStatusCreatorMode()">
                             <option value="text">✏️ Estado de Texto con Fondo de Color</option>
                             <option value="image">📷 Foto / Oferta de Producto de Tienda</option>
+                            <option value="live">🔴 Transmitir Vivo P2P en Directo</option>
                         </select>
                     </div>
 
@@ -857,14 +1015,36 @@
                             <label class="font-inter-black">Vincular Producto de Mi Tienda (Opcional):</label>
                             <select class="form-control font-inter-light" id="statusLinkProductSelect">
                                 <option value="">-- Sin Producto Vinculado --</option>
-                                <option value="prod_hi_fi">Auriculares Wireless Hi-Fi ($100.00)</option>
-                                <option value="prod_watch">Smartwatch P2P Pro ($149.99)</option>
                             </select>
                         </div>
                     </div>
 
+                    <!-- Modo Transmisión en Vivo P2P -->
+                    <div id="statusLiveGroup" style="display:none;">
+                        <div style="background:rgba(239, 68, 68, 0.1); border:1px solid #ef4444; border-radius:14px; padding:14px; text-align:center; margin-bottom:14px;">
+                            <div style="font-size:1.8rem; margin-bottom:4px;">📡 🔴</div>
+                            <div class="font-inter-black" style="font-size:0.95rem; color:#ef4444;">Transmisión en Vivo P2P</div>
+                            <div class="font-inter-light" style="font-size:0.75rem; color:var(--wa-text-secondary); margin-top:2px;">
+                                Transmite video en tiempo real a la comunidad BBQ y vincula tus productos en directo.
+                            </div>
+                        </div>
 
-                    <button type="submit" class="btn-wa-primary" style="width:100%; margin-top:10px;">
+                        <div class="form-group">
+                            <label class="font-inter-black">Vincular Producto de Mi Tienda al Vivo (Opcional):</label>
+                            <select class="form-control font-inter-light" id="statusLiveProductSelect">
+                                <option value="">-- Sin Producto Inicial --</option>
+                            </select>
+                            <div style="font-size:0.72rem; color:var(--wa-text-secondary); margin-top:4px;">
+                                💡 Los espectadores podrán ver el producto fijado en pantalla y comprarlo directo.
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-wa-primary" style="width:100%; margin-top:8px; padding:12px; font-size:0.9rem; background:#ef4444; color:#fff; border:none; font-weight:900;" onclick="handleStartLiveFromStatusModal()">
+                            🔴 Iniciar Transmisión en Vivo Ahora
+                        </button>
+                    </div>
+
+                    <button type="submit" id="btnPublishStatusSubmit" class="btn-wa-primary" style="width:100%; margin-top:10px;">
                         <i class="bi bi-send-fill"></i> Publicar en Mis Estados BBQ
                     </button>
                 </form>
@@ -999,7 +1179,7 @@
                             <div class="font-inter-light" style="font-size:0.75rem; color:var(--wa-green); font-weight:bold;">$100.00 USD (Envío $15 / Retiro $0)</div>
                         </div>
                     </div>
-                    <button class="btn-wa-primary" style="font-size:0.75rem; padding:8px 12px;" onclick="closeLiveViewer(); openCatalogModal();">
+                    <button class="btn-wa-primary" style="font-size:0.75rem; padding:8px 12px;" onclick="closeLiveViewer(); openProductCheckoutModalFromLive();">
                         🛍️ Comprar
                     </button>
                 </div>
@@ -1022,15 +1202,23 @@
     </div>
 
     <!-- Core Scripts -->
+    <script src="https://pay.google.com/gp/p/js/pay.js" async defer></script>
+    <script src="js/db.js"></script>
+    <script src="js/identity.js"></script>
     <script src="js/storage-engine.js"></script>
     <script src="js/p2p-node.js"></script>
+    <script src="js/webrtc-node.js"></script>
+    <script src="js/contacts.js"></script>
     <script src="js/logistics-engine.js"></script>
     <script src="js/ai-orchestrator.js"></script>
     <script src="js/escrow-engine.js"></script>
+    <script src="js/google-pay-engine.js"></script>
     <script src="js/referral-engine.js"></script>
     <script src="js/automation-engine.js"></script>
     <script src="js/p2p-live-engine.js"></script>
+    <script src="js/onboarding.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/bbq-integration.js"></script>
 
 </body>
 </html>

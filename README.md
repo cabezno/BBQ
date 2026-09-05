@@ -1,90 +1,82 @@
-# 🔥 BBQ — Mobile P2P Commerce, Local AI & Escrow
+# 🔥 BBQ — Mensajería y Comercio P2P
 
-**BBQ** es una *Progressive Web App* (PWA) con estética de WhatsApp que simula un ecosistema de **comercio P2P móvil**: mensajería, tiendas, IA local, pagos con retención (escrow) tri-parte, logística y transmisiones en vivo — **todo del lado del cliente, sin servidores centrales**.
+**BBQ** es una app de mensajería y comercio estilo WhatsApp, pensada para **Android e iPhone**, con el **mínimo intermediario posible**: el contenido viaja **P2P (WebRTC)** directo entre teléfonos, la base de datos vive **en tu teléfono**, y el servidor es solo una **guía telefónica + señalización** (nunca ve tus mensajes).
 
-> ⚠️ **Proyecto de demostración / prototipo.** Los pagos, la red P2P, el escrow y los conectores de IA están **simulados** en el navegador (usando `localStorage`, `BroadcastChannel`, `crypto.getRandomValues`, etc.). No procesa dinero real ni se conecta a servicios de producción.
-
----
-
-## ✨ Características
-
-- **📱 Interfaz estilo WhatsApp** — lista de chats, estados/historias, perfil, marco de teléfono simulado y roles (Comprador / Tienda + IA / Repartidor).
-- **🌐 Red P2P** — malla entre nodos mediante `BroadcastChannel`, mensajería directa y difusión de catálogos por región (soberanía de datos: cada dispositivo es dueño de su propia base de datos).
-- **⚡ Orquestador de IA local** — conector universal (Gemini, ChatGPT/OpenAI, Claude, DeepSeek, Ollama, WASM in-app) con **cortafuegos de privacidad por niveles de acceso** y auto-respuestas de tienda.
-- **🔒 Escrow tri-parte de doble fase** — pre-autorización tipo *Auth & Hold*, nonce criptográfico `Kr` + hash de validación, código QR y liquidación simultánea (producto → tienda, envío → repartidor) o reembolso por expiración.
-- **🚚 Motor de logística** — matriz de tarifas por zona, cálculo de envío y órdenes de despacho.
-- **🤖 Motor de automatizaciones** — reglas ejecutadas por la IA (auto-despacho a courier, reabastecimiento por bajo stock, auto-reembolso por timeout, descuentos por volumen).
-- **📹 Live Shopping P2P** — transmisiones en vivo con cámara (`getUserMedia`), grabación local (`MediaRecorder`), producto fijado y reacciones flotantes.
-- **🎁 Programa de referidos** — invitaciones hacia hitos que desbloquean recompensas de tiendas participantes.
+> Estado: en construcción activa. Ver [`ARCHITECTURE.md`](ARCHITECTURE.md) para el diseño completo y el roadmap.
 
 ---
 
-## 🏗️ Arquitectura
+## ✨ Cómo funciona
 
-La app es 100 % estática (HTML + CSS + JavaScript vanilla, sin build). La lógica se divide en motores independientes que se cargan en orden desde `index.html`:
-
-| Módulo | Responsabilidad |
-|---|---|
-| `js/storage-engine.js` | Base de datos local por nodo (simulación SQLite sobre `localStorage`). |
-| `js/p2p-node.js` | Capa de red/transporte P2P (malla `BroadcastChannel`, mensajería directa, difusión de catálogo). |
-| `js/logistics-engine.js` | Tarifas de envío por zona y órdenes de despacho. |
-| `js/ai-orchestrator.js` | Interceptor de mensajes, cortafuegos de privacidad y auto-respuestas de IA. |
-| `js/escrow-engine.js` | Escrow de doble fase, nonce/hash, QR y liquidación. |
-| `js/referral-engine.js` | Referidos y recompensas. |
-| `js/automation-engine.js` | Reglas de automatización ejecutadas por IA. |
-| `js/p2p-live-engine.js` | Live shopping, captura y grabación de video. |
-| `js/app.js` | Controlador de UI: navegación, chats, modales, roles del simulador. |
+- **Identidad atada al dispositivo** — una clave criptográfica **no exportable** se genera en tu teléfono. El número de teléfono es solo una etiqueta para que te encuentren.
+- **Servidor mínimo** — guarda únicamente `{ teléfono, nombre, peerId, clave pública }` y hace de **señalización transitoria** WebRTC. No almacena mensajes.
+- **Mensajería P2P** — chat directo teléfono↔teléfono por WebRTC (cifrado DTLS). Entrega cuando ambos están en línea.
+- **Contactos** — agregás por número (o desde tu agenda en la app nativa) y ves quién ya tiene BBQ; a los que no, los invitás por WhatsApp/SMS.
+- **Comercio** — IA local, Escrow con QR, Google Pay (sandbox), logística, automatizaciones, referidos y Vivos.
 
 ---
 
-## 🚀 Cómo ejecutar
+## 🚀 Probar en teléfonos (rápido, sin APK)
 
-No requiere instalación ni compilación. Al usar módulos con `fetch`/APIs del navegador conviene servir los archivos por HTTP en lugar de abrir el `index.html` con `file://`.
+La forma más simple: desplegar el servidor (que **también sirve la app**) y abrir su URL en el teléfono.
+
+1. **Deploy en [Render](https://render.com) (gratis)**: creá un *Web Service* conectando este repo. Render detecta `render.yaml` y corre `npm install` + `npm start`. Te da una URL con **HTTPS**, ej: `https://bbq-xxx.onrender.com`.
+2. En cada teléfono (Android/iPhone), abrí esa URL en el navegador → **"Agregar a pantalla de inicio"**.
+3. Completá el onboarding (nombre + número) en cada teléfono.
+4. En un teléfono: **➕** → número del otro → **"Buscar en BBQ y agregar"** → **Abrir chat** → mandá un mensaje.
+5. Llega en tiempo real, **P2P directo**. 🎉
+
+> HTTPS es necesario para WebRTC, PWA y Google Pay — Render lo da automáticamente.
+
+## 💻 Correr en local (desarrollo / LAN)
 
 ```bash
-# Opción 1: Python
-python -m http.server 8000
-
-# Opción 2: Node
-npx serve .
+npm install
+npm run server      # http://localhost:3000 y http://<IP-LAN>:3000
 ```
+Abrí `http://<IP-LAN>:3000` en teléfonos de la **misma WiFi**.
 
-Luego abre <http://localhost:8000> en el navegador (idealmente en vista móvil / DevTools responsive).
+## 📱 App nativa (agenda real + push)
 
-Para probar la malla P2P entre nodos, abre la app en **varias pestañas** y cambia de rol (Comprador / Tienda / Repartidor).
-
----
-
-## 🧰 Stack tecnológico
-
-- HTML5, CSS3, JavaScript (ES6+, sin frameworks ni bundler)
-- [Bootstrap Icons](https://icons.getbootstrap.com/) y [Google Fonts (Inter)](https://fonts.google.com/specimen/Inter) vía CDN
-- APIs del navegador: `BroadcastChannel`, `localStorage`, `MediaRecorder`, `getUserMedia`, `Canvas`, `Web Crypto`
-- PWA: `manifest.json` (instalable)
+Para leer la agenda del teléfono y push, se compila con **Capacitor**. Ver [`CAPACITOR.md`](CAPACITOR.md).
 
 ---
 
-## 📁 Estructura del proyecto
+## 🗂️ Estructura
 
 ```
 .
-├── index.html          # Estructura de la app y todas las pantallas
-├── style.css           # Estilos (tema oscuro estilo WhatsApp)
-├── manifest.json       # Manifiesto PWA
-└── js/
-    ├── app.js
-    ├── storage-engine.js
-    ├── p2p-node.js
-    ├── ai-orchestrator.js
-    ├── escrow-engine.js
-    ├── logistics-engine.js
-    ├── automation-engine.js
-    ├── referral-engine.js
-    └── p2p-live-engine.js
+├── server.js              # Servidor mínimo: directorio + señalización (no guarda mensajes)
+├── capacitor.config.json  # Config app nativa
+├── render.yaml            # Deploy en Render
+├── ARCHITECTURE.md        # Diseño y decisiones
+├── CAPACITOR.md           # Guía de build nativo
+└── www/                   # La app (se sirve por HTTP y se empaqueta en Capacitor)
+    ├── index.html
+    ├── style.css
+    ├── manifest.json / sw.js
+    ├── icons/
+    └── js/
+        ├── db.js                 # IndexedDB (DB local)
+        ├── identity.js           # Identidad del dispositivo (clave no exportable)
+        ├── webrtc-node.js        # Transporte P2P (WebRTC)
+        ├── contacts.js           # Contactos + match + invitar
+        ├── onboarding.js         # Alta primera vez
+        ├── bbq-integration.js    # Integración con la UI
+        ├── storage-engine.js     # Historial local
+        ├── ai-orchestrator.js · escrow-engine.js · google-pay-engine.js
+        ├── logistics-engine.js · automation-engine.js · referral-engine.js
+        ├── p2p-live-engine.js · p2p-node.js · app.js
 ```
 
 ---
 
+## 🧰 Stack
+
+- Web: HTML/CSS/JS vanilla, WebRTC, IndexedDB, Web Crypto, Service Worker (PWA)
+- Servidor: Node + Express + WebSocket (`ws`)
+- Nativo: Capacitor (Android/iOS) + plugins Contacts/Share/Push
+
 ## 📄 Licencia
 
-Distribuido bajo la licencia MIT. Consulta el archivo [`LICENSE`](LICENSE) para más detalles.
+MIT — ver [`LICENSE`](LICENSE).

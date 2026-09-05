@@ -1,0 +1,14 @@
+# Deploy del servidor mínimo BBQ (directorio + señalización) en Render.
+# Render sirve HTTPS y WebSocket gratis. Como server.js también sirve la app (www/),
+# la misma URL de Render ES la app: abrila en el teléfono y "Agregar a pantalla de inicio".
+services:
+  - type: web
+    name: bbq
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

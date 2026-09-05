@@ -464,8 +464,7 @@ class LocalStorageEngine {
     }
 }
 
-// Instantiate storage engines for the 3 Cockpit nodes
-window.buyerStorage = new LocalStorageEngine('p2p_buyer_7721');
-window.merchantStorage = new LocalStorageEngine('p2p_store_techzone');
-window.logisticsStorage = new LocalStorageEngine('p2p_courier_express');
+// Storage engine initialization is now handled by p2p-node.js
+// Each device gets a single LocalStorageEngine with a unique device ID.
+// Backward-compatible aliases (buyerStorage, merchantStorage, etc.) are set there.
 

@@ -1,0 +1,31 @@
+{
+  "name": "bbq-mobile",
+  "version": "2.0.0",
+  "description": "BBQ Mobile - Mensajería y comercio P2P (WhatsApp-like) con directorio mínimo, E2E y app nativa vía Capacitor",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "server": "node server.js",
+    "start": "node server.js",
+    "cap:sync": "cap sync",
+    "cap:add:android": "cap add android",
+    "cap:add:ios": "cap add ios",
+    "cap:android": "cap open android",
+    "cap:ios": "cap open ios"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/ios": "^6.2.0",
+    "@capacitor/share": "^6.0.3",
+    "@capacitor/push-notifications": "^6.0.4",
+    "@capacitor-community/contacts": "^6.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}

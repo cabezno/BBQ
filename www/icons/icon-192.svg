@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffe01b"/>
+      <stop offset="60%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#f97316"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffe01b"/>
+      <stop offset="60%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#f97316"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bg)"/>
+  <rect x="2" y="2" width="188" height="188" rx="40" fill="none" stroke="#ef4444" stroke-width="3"/>
+  <g transform="translate(96, 80.64)">
+    <text font-family="Arial, sans-serif" font-weight="900" font-size="58" fill="#0b141a" text-anchor="middle" dominant-baseline="central">🔥</text>
+  </g>
+  <g transform="translate(96, 144)">
+    <text font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="31" fill="#0b141a" text-anchor="middle" dominant-baseline="central">BBQ</text>
+  </g>
+</svg>

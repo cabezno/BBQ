@@ -1,9 +1,7 @@
 /**
- * WHATSAPP MOBILE APP CONTROLLER (ANDROID & iPHONE)
- * Handles SIM Phone Auto-detection, Google Account & Apple ID Verification,
- * Universal AI Connector (Gemini, ChatGPT, Claude, DeepSeek, Ollama, WASM),
- * In-App Local Endpoint Server (Port 9090), Native Installed AI App Connector,
- * and AI Automations Engine Execution.
+ * BBQ MOBILE APP CONTROLLER (ANDROID & iPHONE PWA)
+ * Real-time P2P messaging via WebSocket, PWA installable,
+ * AI Connector, Escrow, Vivos, Voice Notes, Stories.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,15 +16,162 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAiSetupData();
     loadStoreData();
     initInstagramStoriesBar();
+    initP2PRealtimeListener();
+    initMobileDetection();
+    registerServiceWorker();
 
     // Trigger Automatic Daily Referral Pop-up on launch
     setTimeout(() => {
         initDailyReferralPopup();
     }, 600);
 
+    // Arrancar el sistema P2P real: identidad del dispositivo + contactos + WebRTC.
+    // (Reemplaza el viejo WS-relay. La señalización P2P la maneja BBQNet.)
+    if (window.BBQ) window.BBQ.boot();
+
     // Select default active chat
     selectMobileChat('p2p_store_techzone');
 });
+
+/* ==========================================================================
+   0. SERVICE WORKER REGISTRATION & PWA INSTALL
+   ========================================================================== */
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => {
+                console.log('[PWA] Service Worker registrado:', reg.scope);
+            })
+            .catch(err => {
+                console.warn('[PWA] Service Worker no registrado:', err);
+            });
+    }
+
+    // PWA Install prompt (Android)
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Show install banner
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) {
+            banner.style.display = 'flex';
+            const btnInstall = document.getElementById('btnPwaInstall');
+            if (btnInstall) {
+                btnInstall.onclick = async () => {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    console.log('[PWA] Install result:', result.outcome);
+                    banner.style.display = 'none';
+                    deferredPrompt = null;
+                };
+            }
+            const btnDismiss = document.getElementById('btnPwaDismiss');
+            if (btnDismiss) {
+                btnDismiss.onclick = () => { banner.style.display = 'none'; };
+            }
+        }
+    });
+}
+
+/* ==========================================================================
+   0b. REAL-TIME P2P MESSAGE LISTENER (WebSocket incoming)
+   ========================================================================== */
+function initP2PRealtimeListener() {
+    window.myNode.onMessage((payload) => {
+        if (payload.type === 'DIRECT_MESSAGE') {
+            // Re-render chat if we're viewing the sender's conversation
+            if (payload.senderId === currentChatId) {
+                renderMobileMessages();
+            }
+            // Always update chat list (new message badge, reorder)
+            renderMobileChatList();
+
+            // Play notification sound
+            playNotificationSound();
+
+            // Show visual notification if chat is not active
+            if (payload.senderId !== currentChatId) {
+                showInAppNotification(payload);
+            }
+        }
+
+        if (payload.type === 'STATUS_PUBLISHED') {
+            initInstagramStoriesBar();
+        }
+
+        if (payload.type === 'PEERS_UPDATE' || payload.type === 'PEER_CONNECTED' || payload.type === 'PEER_DISCONNECTED') {
+            updatePeersOnlineCount(payload.peersOnline);
+        }
+    });
+}
+
+function playNotificationSound() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.2);
+        }
+    } catch (e) {}
+}
+
+function showInAppNotification(payload) {
+    const contact = CONTACTS_DATA[payload.senderId];
+    const name = contact ? contact.name : payload.senderId;
+    const text = payload.message?.text || 'Nuevo mensaje';
+
+    const notif = document.createElement('div');
+    notif.className = 'in-app-notification';
+    notif.innerHTML = `
+        <div style="font-weight:700; font-size:0.85rem;">${name}</div>
+        <div style="font-size:0.78rem; opacity:0.8;">${text.substring(0, 50)}</div>
+    `;
+    notif.onclick = () => {
+        selectMobileChat(payload.senderId);
+        notif.remove();
+    };
+    document.body.appendChild(notif);
+
+    setTimeout(() => {
+        notif.classList.add('fade-out');
+        setTimeout(() => notif.remove(), 400);
+    }, 3500);
+}
+
+function updatePeersOnlineCount(count) {
+    const el = document.getElementById('peersOnlineCount');
+    if (el) el.textContent = `${count || 0} online`;
+}
+
+/* ==========================================================================
+   0c. MOBILE DETECTION & SIMULATOR HIDING
+   ========================================================================== */
+function initMobileDetection() {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    if (isMobile || isStandalone) {
+        // Hide desktop simulator bar
+        const simHeader = document.querySelector('.mobile-sim-header');
+        if (simHeader) simHeader.style.display = 'none';
+
+        // Make phone wrapper fullscreen
+        const wrapper = document.getElementById('phoneWrapper');
+        if (wrapper) wrapper.classList.add('fullscreen');
+    }
+}
 
 
 let currentChatId = 'p2p_store_techzone';
@@ -363,7 +508,7 @@ function renderMobileMessages() {
     }
 
     html += messages.map(m => {
-        const isOutgoing = m.sender === 'p2p_buyer_7721';
+        const isOutgoing = m.sender === 'p2p_buyer_7721' || m.sender === window.MY_PEER_ID;
         const isAi = m.isAiGenerated;
 
         return `
@@ -400,6 +545,36 @@ function renderPayloadCard(card) {
                 <button class="btn-wa-primary" style="width:100%; font-size:0.75rem; padding:5px 8px;" onclick="openEscrowModal()">
                     🔍 Ver Código QR (${isPickup ? 'Escaneo Vendedor' : 'Escaneo Repartidor'})
                 </button>
+            </div>
+        `;
+    } else if (card.type === 'merchant_charge_request') {
+        const isPaid = card.status === 'PAID';
+        const isPickup = card.deliveryMode === 'PICKUP';
+        return `
+            <div style="background:rgba(245, 158, 11, 0.08); border:1px solid ${isPaid ? '#22c55e' : '#f59e0b'}; border-radius:10px; padding:10px; margin-top:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-weight:bold; font-size:0.82rem; color:${isPaid ? '#22c55e' : '#f59e0b'};">
+                        ${isPaid ? '✅ COBRO RECIBIDO & PAGADO' : '🧾 Factura / Solicitud de Cobro'}
+                    </span>
+                    <span style="font-size:0.68rem; background:${isPaid ? '#22c55e20' : '#f59e0b20'}; color:${isPaid ? '#22c55e' : '#f59e0b'}; padding:2px 6px; border-radius:6px; font-weight:bold;">
+                        ${isPaid ? 'Google Pay OK' : 'Pendiente Pago'}
+                    </span>
+                </div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--wa-text-primary); margin-bottom:2px;">${card.concept}</div>
+                <div style="font-size:0.95rem; font-weight:900; color:#38bdf8; margin-bottom:4px;">$${card.total.toFixed(2)} USD</div>
+                <div style="font-size:0.7rem; color:var(--wa-text-secondary); margin-bottom:8px;">
+                    ${isPickup ? '🏪 Retiro en Local ($0 Envío)' : '🚚 Envío Courier (+$' + card.shippingFee.toFixed(2) + ')'}
+                </div>
+                ${!isPaid ? `
+                    <button class="btn-wa-primary" style="width:100%; font-size:0.8rem; padding:8px; display:flex; align-items:center; justify-content:center; gap:6px; background:#ffffff; color:#0f172a; border:none; font-weight:900;" onclick="handlePayMerchantInvoice('${card.id}', ${card.total}, '${card.concept.replace(/'/g, "\\'")}', '${card.deliveryMode}')">
+                        <span style="font-weight:900; background:linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:0.95rem;">GPay</span>
+                        <span>Pagar $${card.total.toFixed(2)} USD</span>
+                    </button>
+                ` : `
+                    <button class="btn-wa-secondary" style="width:100%; font-size:0.75rem; padding:5px;" onclick="openEscrowModal()">
+                        🔍 Ver QR & Estado Escrow
+                    </button>
+                `}
             </div>
         `;
     } else if (card.type === 'voice_note') {
@@ -450,6 +625,27 @@ function sendMessage(textOverride = null) {
     if (!text) return;
 
     if (inputEl) inputEl.value = '';
+
+    // Contacto REAL (P2P por WebRTC): guardar local + enviar directo al peer.
+    const activeContact = CONTACTS_DATA[currentChatId];
+    if (activeContact && activeContact.isReal) {
+        const msg = {
+            id: 'm_' + Date.now(),
+            sender: window.MY_PEER_ID,
+            text: text,
+            timestamp: new Date().toISOString()
+        };
+        window.buyerStorage.appendChatMessage(currentChatId, msg);
+        renderMobileMessages();
+        renderMobileChatList();
+        if (window.BBQNet) {
+            window.BBQNet.send(currentChatId, { type: 'chat', message: msg }).then(r => {
+                if (!r.ok && window.bbqToast) window.bbqToast('⚠️ No entregado (contacto offline)');
+            });
+        }
+        hideAttachPopup();
+        return;
+    }
 
     window.buyerNode.sendDirectMessage(currentChatId, text);
     renderMobileMessages();
@@ -730,6 +926,11 @@ function openModal(modalId) {
         if (label) {
             label.textContent = isPickup ? '🔒 Retención Auth & Hold (🏪 Retiro en Tienda - $0 Envío)' : '🔒 Retención Auth & Hold (🚚 Envío por Courier)';
         }
+    } else if (modalId === 'modalCreateStore') {
+        renderMerchantWallet();
+    } else if (modalId === 'modalCreateStatus') {
+        populateStatusProductsDropdowns();
+        toggleStatusCreatorMode();
     } else if (modalId === 'modalStores') {
         renderStoresModal();
     } else if (modalId === 'modalReferrals') {
@@ -774,11 +975,11 @@ function openCatalogModal() {
                 </div>
 
                 <div style="display:flex; gap:8px; width:100%; margin-top:4px;">
-                    <button class="btn-wa-primary" style="flex:1; font-size:0.75rem; padding:6px 8px;" onclick="triggerEscrowPurchase('${p.id}', ${p.price}, ${p.shippingFee || 15}, 'COURIER'); closeModals();">
-                        🚚 Envío Courier (+$${(p.shippingFee || 15).toFixed(2)})
+                    <button class="btn-wa-primary" style="flex:1; font-size:0.75rem; padding:6px 8px;" onclick="openProductCheckoutModal('${p.id}', 'COURIER')">
+                        🚚 Comprar (Courier)
                     </button>
-                    <button class="btn-wa-primary" style="flex:1; font-size:0.75rem; padding:6px 8px; background:#8b5cf6;" onclick="triggerEscrowPurchase('${p.id}', ${p.price}, ${p.shippingFee || 15}, 'PICKUP'); closeModals();">
-                        🏪 Retiro en Tienda ($0 Envío)
+                    <button class="btn-wa-primary" style="flex:1; font-size:0.75rem; padding:6px 8px; background:#8b5cf6;" onclick="openProductCheckoutModal('${p.id}', 'PICKUP')">
+                        🏪 Comprar (Retiro $0)
                     </button>
                 </div>
             </div>
@@ -788,13 +989,165 @@ function openCatalogModal() {
     openModal('modalCatalog');
 }
 
-function triggerEscrowPurchase(productId, price, shippingFee, deliveryMode = 'COURIER') {
+let currentCheckoutProduct = null;
+
+function openProductCheckoutModal(productId, defaultDeliveryMode = 'COURIER') {
+    const products = window.merchantStorage.getProducts();
+    let product = products.find(p => p.id === productId);
+
+    if (!product) {
+        product = {
+            id: productId || 'prod_hi_fi',
+            name: 'Auriculares Wireless Hi-Fi Pro',
+            price: 100.00,
+            shippingFee: 15.00,
+            stock: 12,
+            image: '🎧'
+        };
+    }
+
+    currentCheckoutProduct = product;
+
+    const imgEl = document.getElementById('checkoutProdImage');
+    const nameEl = document.getElementById('checkoutProdName');
+    const priceEl = document.getElementById('checkoutProdPrice');
+    const stockEl = document.getElementById('checkoutProdStock');
+    const modeSelect = document.getElementById('checkoutDeliveryModeSelect');
+
+    if (imgEl) {
+        const isImgUrl = product.image && (product.image.startsWith('http') || product.image.startsWith('data:'));
+        imgEl.innerHTML = isImgUrl ? `<img src="${product.image}" style="width:100%; height:100%; object-fit:cover;">` : (product.image || '📦');
+    }
+    if (nameEl) nameEl.textContent = product.name;
+    if (priceEl) priceEl.textContent = `$${product.price.toFixed(2)} USD`;
+    if (stockEl) stockEl.textContent = `Stock: ${product.stock || 10} unidades disponibles`;
+    if (modeSelect) modeSelect.value = defaultDeliveryMode;
+
+    updateCheckoutTotalSummary();
+    openModal('modalProductCheckout');
+}
+
+function openProductCheckoutModalFromLive() {
+    const pinned = window.p2pLiveEngine ? window.p2pLiveEngine.pinnedProduct : null;
+    const prodId = pinned ? pinned.id : 'prod_hi_fi';
+    openProductCheckoutModal(prodId, 'COURIER');
+}
+
+function updateCheckoutTotalSummary() {
+    if (!currentCheckoutProduct) return;
+
+    const modeSelect = document.getElementById('checkoutDeliveryModeSelect');
+    const deliveryMode = modeSelect ? modeSelect.value : 'COURIER';
+    const isPickup = deliveryMode === 'PICKUP';
+
+    const subtotal = currentCheckoutProduct.price;
+    const shippingFee = isPickup ? 0.00 : (currentCheckoutProduct.shippingFee || 15.00);
+    const totalHeld = subtotal + shippingFee;
+
+    const subEl = document.getElementById('summaryProdSubtotal');
+    const shipEl = document.getElementById('summaryShippingFee');
+    const totalEl = document.getElementById('summaryTotalHeld');
+    const btnEl = document.getElementById('btnConfirmProductCheckout');
+
+    if (subEl) subEl.textContent = `$${subtotal.toFixed(2)} USD`;
+    if (shipEl) shipEl.textContent = isPickup ? '$0.00 USD (Gratis en Local)' : `$${shippingFee.toFixed(2)} USD`;
+    if (totalEl) totalEl.textContent = `$${totalHeld.toFixed(2)} USD`;
+    if (btnEl) {
+        btnEl.innerHTML = `<span style="font-weight:900; background:linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:1.1rem;">GPay</span> <span>Pagar $${totalHeld.toFixed(2)} USD & Crear QR Escrow</span>`;
+    }
+}
+
+async function executeProductCheckoutPayment() {
+    if (!currentCheckoutProduct) return;
+
+    const modeSelect = document.getElementById('checkoutDeliveryModeSelect');
+    const deliveryMode = modeSelect ? modeSelect.value : 'COURIER';
+    const isPickup = deliveryMode === 'PICKUP';
+    const price = currentCheckoutProduct.price;
+    const shippingFee = isPickup ? 0.00 : (currentCheckoutProduct.shippingFee || 15.00);
+    const totalHeld = price + shippingFee;
+
+    closeModals();
+
+    // Trigger Google Pay Payment Sheet
+    const payRes = await window.googlePayEngine.processPayment(totalHeld, `Compra: ${currentCheckoutProduct.name}`, deliveryMode);
+    if (!payRes || !payRes.success) {
+        showInAppNotification('⚠️ Pago Cancelado', payRes.message || 'La transacción con Google Pay no fue autorizada.');
+        return;
+    }
+
+    // Create BBQ Cryptographic Dual-Phase Escrow (Auth & Hold)
+    window.escrowEngine.createAuthAndHoldEscrow(price, shippingFee, deliveryMode);
+    window.escrowEngine.currentEscrow.productName = currentCheckoutProduct.name;
+
+    // Update merchant wallet pending balance
+    if (window.escrowEngine.merchantWallet) {
+        window.escrowEngine.merchantWallet.pendingHeld += price;
+        window.escrowEngine.merchantWallet.history.unshift({
+            id: 'tx_' + Date.now().toString().slice(-4),
+            type: 'CHARGED_ESCROW',
+            amount: totalHeld,
+            description: `${currentCheckoutProduct.name} (${isPickup ? 'Retiro' : 'Courier'})`,
+            status: 'HELD',
+            date: new Date().toLocaleDateString()
+        });
+    }
+
+    // Evaluate AI Automation Trigger
+    if (window.automationEngine) {
+        const autoRes = window.automationEngine.evaluateTrigger('ESCROW_PAYMENT_CREATED', { productId: currentCheckoutProduct.id, total: totalHeld, deliveryMode });
+        if (autoRes.executed) {
+            console.log(`⚡ [AUTOMACIÓN IA LOGRADA] ${autoRes.message}`);
+        }
+    }
+
+    const msgObj = {
+        id: 'msg_' + Date.now(),
+        sender: 'p2p_buyer_7721',
+        text: `🛒 Confirmo la compra autorizada con Google Pay para "${currentCheckoutProduct.name}" (Auth & Hold: $${totalHeld.toFixed(2)} USD).`,
+        timestamp: Date.now(),
+        payloadCard: {
+            type: 'escrow_payment',
+            productPrice: price,
+            shippingFee: shippingFee,
+            total: totalHeld,
+            deliveryMode: deliveryMode,
+            paymentMethod: 'GOOGLE_PAY'
+        }
+    };
+
+    window.buyerStorage.appendChatMessage(currentChatId, msgObj);
+    renderMobileMessages();
+    openEscrowModal();
+    showInAppNotification('✅ Pre-Autorización Google Pay OK', `Retención de $${totalHeld.toFixed(2)} USD creada en Escrow. Escanea el código QR para liberar fondos.`);
+}
+
+async function triggerEscrowPurchase(productId, price, shippingFee, deliveryMode = 'COURIER') {
     const isPickup = deliveryMode === 'PICKUP';
     const total = isPickup ? price : price + shippingFee;
 
+    // Prompt Google Pay Sheet
+    const payRes = await window.googlePayEngine.processPayment(total, `Compra Producto en Store`, deliveryMode);
+    if (!payRes || !payRes.success) {
+        showInAppNotification('⚠️ Pago Cancelado', payRes.message || 'La transacción con Google Pay no fue autorizada.');
+        return;
+    }
+
     window.escrowEngine.createAuthAndHoldEscrow(price, shippingFee, deliveryMode);
 
-    // Evaluate AI Automation Trigger (Auto-Courier Dispatch / Auto-Stock Alert)
+    if (window.escrowEngine.merchantWallet) {
+        window.escrowEngine.merchantWallet.pendingHeld += price;
+        window.escrowEngine.merchantWallet.history.unshift({
+            id: 'tx_' + Date.now().toString().slice(-4),
+            type: 'CHARGED_ESCROW',
+            amount: total,
+            description: `Compra en tienda (${isPickup ? 'Retiro' : 'Courier'})`,
+            status: 'HELD',
+            date: new Date().toLocaleDateString()
+        });
+    }
+
+    // Evaluate AI Automation Trigger
     if (window.automationEngine) {
         const autoRes = window.automationEngine.evaluateTrigger('ESCROW_PAYMENT_CREATED', { productId, total, deliveryMode });
         if (autoRes.executed) {
@@ -805,20 +1158,129 @@ function triggerEscrowPurchase(productId, price, shippingFee, deliveryMode = 'CO
     const msgObj = {
         id: 'msg_' + Date.now(),
         sender: 'p2p_buyer_7721',
-        text: `🛒 Confirmo la compra de producto con modalidad ${isPickup ? '🏪 Retiro en Tienda ($0 envío)' : '🚚 Envío por Courier'}. Retención Google Wallet: $${total.toFixed(2)} USD.`,
+        text: `🛒 Confirmo la compra autorizada con Google Pay (Auth & Hold: $${total.toFixed(2)} USD).`,
         timestamp: Date.now(),
         payloadCard: {
             type: 'escrow_payment',
             productPrice: price,
             shippingFee: shippingFee,
             total: total,
-            deliveryMode: deliveryMode
+            deliveryMode: deliveryMode,
+            paymentMethod: 'GOOGLE_PAY'
         }
     };
 
-    window.buyerStorage.addChatMessage(currentChatId, msgObj);
+    window.buyerStorage.appendChatMessage(currentChatId, msgObj);
     renderMobileMessages();
     openEscrowModal();
+    showInAppNotification('✅ Google Pay Autorizado', `Pre-autorización de $${total.toFixed(2)} USD retenida en Escrow.`);
+}
+
+function renderMerchantWallet() {
+    if (!window.escrowEngine) return;
+    const wallet = window.escrowEngine.getMerchantWallet();
+    const heldEl = document.getElementById('storeWalletHeld');
+    const availEl = document.getElementById('storeWalletAvailable');
+    if (heldEl) heldEl.textContent = `$${wallet.pendingHeld.toFixed(2)} USD`;
+    if (availEl) availEl.textContent = `$${wallet.settledAvailable.toFixed(2)} USD`;
+}
+
+function handleWithdrawMerchantWallet() {
+    if (!window.escrowEngine) return;
+    const res = window.escrowEngine.withdrawMerchantBalance();
+    if (res.success) {
+        showInAppNotification('💰 Retiro Exitoso', `Se transfirieron $${res.amount.toFixed(2)} USD a tu cuenta vinculada en Google Wallet.`);
+        renderMerchantWallet();
+    } else {
+        showInAppNotification('⚠️ Fondo Insuficiente', res.message);
+    }
+}
+
+function openMerchantChargeModal() {
+    closeModals();
+    openModal('modalMerchantCharge');
+}
+
+function handleSendMerchantCharge() {
+    const conceptInput = document.getElementById('chargeInputConcept');
+    const amountInput = document.getElementById('chargeInputAmount');
+    const shippingInput = document.getElementById('chargeInputShipping');
+    const deliveryInput = document.getElementById('chargeInputDelivery');
+
+    if (!conceptInput || !amountInput) return;
+
+    const concept = conceptInput.value.trim() || 'Servicio / Producto Tienda';
+    const amount = parseFloat(amountInput.value) || 0;
+    const shippingFee = parseFloat(shippingInput.value) || 0;
+    const deliveryMode = deliveryInput ? deliveryInput.value : 'PICKUP';
+    const isPickup = deliveryMode === 'PICKUP';
+    const total = isPickup ? amount : amount + shippingFee;
+
+    if (total <= 0) {
+        showInAppNotification('⚠️ Monto Inválido', 'Ingrese un monto mayor a $0 USD.');
+        return;
+    }
+
+    const invoiceId = 'inv_' + Date.now();
+    const msgObj = {
+        id: 'msg_' + Date.now(),
+        sender: 'p2p_store_techzone',
+        text: `🧾 Solicitud de Cobro emitida por TechZone Store 🏬: ${concept} ($${total.toFixed(2)} USD).`,
+        timestamp: Date.now(),
+        payloadCard: {
+            id: invoiceId,
+            type: 'merchant_charge_request',
+            concept: concept,
+            amount: amount,
+            shippingFee: shippingFee,
+            total: total,
+            deliveryMode: deliveryMode,
+            status: 'PENDING'
+        }
+    };
+
+    window.buyerStorage.appendChatMessage(currentChatId, msgObj);
+    renderMobileMessages();
+    closeModals();
+    showInAppNotification('🧾 Factura Enviada', `Solicitud de cobro enviada al chat por $${total.toFixed(2)} USD.`);
+}
+
+async function handlePayMerchantInvoice(invoiceId, totalAmount, concept, deliveryMode) {
+    const payRes = await window.googlePayEngine.processPayment(totalAmount, concept, deliveryMode);
+    if (!payRes || !payRes.success) {
+        showInAppNotification('⚠️ Pago Cancelado', payRes.message || 'La transacción con Google Pay no fue autorizada.');
+        return;
+    }
+
+    const isPickup = deliveryMode === 'PICKUP';
+    const productPrice = isPickup ? totalAmount : Math.max(0, totalAmount - 15);
+    const shippingFee = isPickup ? 0 : 15;
+
+    window.escrowEngine.createAuthAndHoldEscrow(productPrice, shippingFee, deliveryMode);
+
+    if (window.escrowEngine.merchantWallet) {
+        window.escrowEngine.merchantWallet.pendingHeld += productPrice;
+        window.escrowEngine.merchantWallet.history.unshift({
+            id: 'tx_' + Date.now().toString().slice(-4),
+            type: 'CHARGED_ESCROW',
+            amount: totalAmount,
+            description: `${concept} (Cobro Directo Google Pay)`,
+            status: 'HELD',
+            date: new Date().toLocaleDateString()
+        });
+    }
+
+    const db = window.buyerStorage.getDatabase();
+    const messages = db.chats[currentChatId] || [];
+    const msgIndex = messages.findIndex(m => m.payloadCard && m.payloadCard.id === invoiceId);
+    if (msgIndex !== -1) {
+        messages[msgIndex].payloadCard.status = 'PAID';
+        window.buyerStorage.saveDatabase(db);
+    }
+
+    renderMobileMessages();
+    openEscrowModal();
+    showInAppNotification('✅ Pago con Google Pay OK', `Se pre-autorizaron $${totalAmount.toFixed(2)} USD en Escrow.`);
 }
 
 function renderStoresModal() {
@@ -1261,7 +1723,7 @@ function renderStorySlide() {
                     btnBuy.onclick = () => {
                         closeStatusViewer();
                         selectMobileChat('p2p_store_techzone');
-                        openCatalogModal();
+                        openProductCheckoutModal(slide.linkedProductId, 'COURIER');
                     };
                 }
             } else if (buyDrawer) {
@@ -1445,6 +1907,60 @@ function handlePublishStatus() {
     initInstagramStoriesBar();
     closeModals();
     alert('🎉 ¡Tu historia/foto ha sido publicada exitosamente en BBQ!');
+}
+
+function toggleStatusCreatorMode() {
+    const typeSelect = document.getElementById('statusInputType');
+    const textGroup = document.getElementById('statusTextGroup');
+    const imageGroup = document.getElementById('statusImageGroup');
+    const liveGroup = document.getElementById('statusLiveGroup');
+    const publishBtn = document.getElementById('btnPublishStatusSubmit');
+
+    if (!typeSelect) return;
+    const mode = typeSelect.value;
+
+    if (textGroup) textGroup.style.display = mode === 'text' ? 'block' : 'none';
+    if (imageGroup) imageGroup.style.display = mode === 'image' ? 'block' : 'none';
+    if (liveGroup) liveGroup.style.display = mode === 'live' ? 'block' : 'none';
+    if (publishBtn) publishBtn.style.display = mode === 'live' ? 'none' : 'block';
+
+    if (mode === 'live' || mode === 'image') {
+        populateStatusProductsDropdowns();
+    }
+}
+
+function populateStatusProductsDropdowns() {
+    const liveSelect = document.getElementById('statusLiveProductSelect');
+    const imageSelect = document.getElementById('statusLinkProductSelect');
+    if (!liveSelect && !imageSelect) return;
+
+    const products = window.merchantStorage.getProducts();
+    const optionsHtml = '<option value="">-- Sin Producto Vinculado --</option>' +
+        products.map(p => `<option value="${p.id}">${p.name} ($${p.price.toFixed(2)} USD)</option>`).join('');
+
+    if (liveSelect) liveSelect.innerHTML = optionsHtml;
+    if (imageSelect) imageSelect.innerHTML = optionsHtml;
+}
+
+async function handleStartLiveFromStatusModal() {
+    const liveSelect = document.getElementById('statusLiveProductSelect');
+    const selectedProdId = liveSelect ? liveSelect.value : null;
+
+    if (selectedProdId) {
+        const products = window.merchantStorage.getProducts();
+        const found = products.find(p => p.id === selectedProdId);
+        if (found) {
+            window.p2pLiveEngine.pinnedProduct = found;
+        }
+    } else {
+        window.p2pLiveEngine.pinnedProduct = null;
+    }
+
+    closeModals();
+    await handleStartLiveHostPrompt();
+    if (window.p2pLiveEngine.pinnedProduct) {
+        showInAppNotification('📌 Producto Vinculado al Vivo', `El producto "${window.p2pLiveEngine.pinnedProduct.name}" ya está fijado en pantalla.`);
+    }
 }
 
 function toggleSearchBox() {

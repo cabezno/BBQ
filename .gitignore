@@ -28,3 +28,11 @@ tmp/
 # Env
 .env
 .env.local
+
+# Datos del servidor (directorio de usuarios)
+directory.json
+
+# Capacitor (proyectos nativos generados)
+/android/
+/ios/
+.capacitor/
