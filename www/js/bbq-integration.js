@@ -69,7 +69,7 @@
                     return;
                 }
 
-                if (!msg || (msg.type !== 'chat' && msg.type !== 'voice') || !msg.message) return;
+                if (!msg || !['chat', 'voice', 'attachment'].includes(msg.type) || !msg.message) return;
 
                 // Asegurar que el remitente exista como contacto
                 if (typeof CONTACTS_DATA !== 'undefined' && !CONTACTS_DATA[fromPeerId]) {
@@ -84,6 +84,14 @@
                         const blob = await (await fetch(msg.audio)).blob();
                         await window.BBQDB.set('messages', msg.message.payloadCard.id, blob);
                     } catch (e) { console.warn('[BBQ] No se pudo guardar audio entrante', e); }
+                }
+
+                // Adjunto entrante (imagen/archivo): guardar los bytes en IndexedDB.
+                if (msg.type === 'attachment' && msg.data && msg.message.payloadCard) {
+                    try {
+                        const blob = await (await fetch(msg.data)).blob();
+                        await window.BBQDB.set('messages', msg.message.payloadCard.id, blob);
+                    } catch (e) { console.warn('[BBQ] No se pudo guardar adjunto entrante', e); }
                 }
 
                 const incoming = msg.message;

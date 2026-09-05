@@ -485,9 +485,21 @@ function renderMobileMessages() {
 
     container.innerHTML = html;
     container.scrollTop = container.scrollHeight;
+    hydrateAttachments(); // cargar imágenes/archivos desde IndexedDB
 }
 
 function renderPayloadCard(card) {
+    if (card.type === 'image') {
+        return `<img data-att="${card.id}" style="max-width:220px; max-height:280px; border-radius:10px; margin-top:6px; cursor:pointer; display:block; background:#0000001a;" onclick="openImageAttachment('${card.id}')">`;
+    }
+    if (card.type === 'file') {
+        const kb = card.size ? Math.max(1, Math.round(card.size / 1024)) : '';
+        const safeName = (card.name || 'Documento').replace(/'/g, '').replace(/"/g, '');
+        return `<div data-att="${card.id}" onclick="downloadAttachment('${card.id}','${safeName}')" style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.25); border:1px solid var(--wa-border); border-radius:10px; padding:10px; margin-top:6px; cursor:pointer;">
+            <i class="bi bi-file-earmark-arrow-down" style="font-size:1.6rem; color:var(--wa-green);"></i>
+            <div><div style="font-size:0.82rem; font-weight:600;">${safeName}</div><div style="font-size:0.7rem; color:var(--wa-text-secondary);">${kb} KB · Tocar para descargar</div></div>
+        </div>`;
+    }
     if (card.type === 'escrow_payment') {
         const isPickup = card.deliveryMode === 'PICKUP';
         return `
@@ -655,6 +667,91 @@ function initAttachmentPopup() {
 function hideAttachPopup() {
     const popup = document.getElementById('mAttachPopup');
     if (popup) popup.style.display = 'none';
+}
+
+/* --- ADJUNTOS REALES (imágenes y documentos) --- */
+const bbqAttURLs = {}; // id -> objectURL/dataURL en memoria
+
+function pickAttachment(kind) {
+    hideAttachPopup();
+    if (!currentChatId || !CONTACTS_DATA[currentChatId]) { if (window.bbqToast) window.bbqToast('Abrí el chat de un contacto'); return; }
+    const input = document.createElement('input');
+    input.type = 'file';
+    if (kind === 'image') input.accept = 'image/*';
+    input.style.display = 'none';
+    input.onchange = (e) => { const f = e.target.files[0]; if (f) handleAttachmentFile(f); if (input.parentNode) document.body.removeChild(input); };
+    document.body.appendChild(input);
+    input.click();
+}
+
+async function handleAttachmentFile(file) {
+    const chatId = currentChatId;
+    const contact = CONTACTS_DATA[chatId];
+    const isImage = file.type.startsWith('image/');
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        let dataUrl = e.target.result;
+        if (isImage) dataUrl = await compressDataURL(dataUrl, 1080, 0.7);
+        const attId = 'att_' + Date.now();
+        // El archivo va a IndexedDB (no a localStorage, que reventaría por tamaño).
+        try { const blob = await (await fetch(dataUrl)).blob(); await window.BBQDB.set('messages', attId, blob); } catch (err) {}
+        bbqAttURLs[attId] = dataUrl;
+        const card = isImage
+            ? { type: 'image', id: attId }
+            : { type: 'file', id: attId, name: file.name, size: file.size, mime: file.type };
+        const msg = {
+            id: 'msg_' + Date.now(),
+            sender: window.MY_PEER_ID || 'me',
+            text: isImage ? '📷 Foto' : ('📄 ' + file.name),
+            timestamp: new Date().toISOString(),
+            payloadCard: card
+        };
+        window.buyerStorage.appendChatMessage(chatId, msg);
+        renderMobileMessages();
+        renderMobileChatList();
+        // Enviar P2P (bytes en base64) al contacto real.
+        if (contact && contact.isReal && window.BBQNet) {
+            if (dataUrl.length > 1200000) {
+                if (window.bbqToast) window.bbqToast('Archivo muy grande para enviar por P2P');
+            } else {
+                window.BBQNet.send(chatId, { type: 'attachment', message: msg, data: dataUrl }).then(r => {
+                    if (!r.ok && window.bbqToast) window.bbqToast('⚠️ No entregado (contacto offline)');
+                });
+            }
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+// Carga (async) las imágenes/archivos desde IndexedDB en los mensajes ya renderizados.
+async function hydrateAttachments() {
+    const els = document.querySelectorAll('[data-att]:not([data-att-loaded])');
+    for (const el of els) {
+        const id = el.getAttribute('data-att');
+        el.setAttribute('data-att-loaded', '1');
+        let url = bbqAttURLs[id];
+        if (!url) {
+            try { const blob = await window.BBQDB.get('messages', id); if (blob) { url = URL.createObjectURL(blob); bbqAttURLs[id] = url; } } catch (e) {}
+        }
+        if (url && el.tagName === 'IMG') el.src = url;
+    }
+}
+
+function openImageAttachment(id) {
+    const show = (u) => {
+        let ov = document.getElementById('bbqImgOverlay');
+        if (!ov) { ov = document.createElement('div'); ov.id = 'bbqImgOverlay'; ov.onclick = () => ov.remove(); document.body.appendChild(ov); }
+        ov.style.cssText = 'position:fixed;inset:0;z-index:260000;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;';
+        ov.innerHTML = `<img src="${u}" style="max-width:95%;max-height:95%;border-radius:8px;">`;
+    };
+    if (bbqAttURLs[id]) return show(bbqAttURLs[id]);
+    window.BBQDB.get('messages', id).then(blob => { if (blob) { const u = URL.createObjectURL(blob); bbqAttURLs[id] = u; show(u); } });
+}
+
+function downloadAttachment(id, name) {
+    const trigger = (u) => { const a = document.createElement('a'); a.href = u; a.download = name || 'archivo'; document.body.appendChild(a); a.click(); a.remove(); };
+    if (bbqAttURLs[id]) return trigger(bbqAttURLs[id]);
+    window.BBQDB.get('messages', id).then(blob => { if (blob) { const u = URL.createObjectURL(blob); bbqAttURLs[id] = u; trigger(u); } });
 }
 
 /* ==========================================================================
