@@ -2106,21 +2106,14 @@ function handleContactPickerSelect(contactId, mode) {
 }
 
 function handleCreateNewContactPrompt() {
-    const name = prompt('Nombre del nuevo contacto:', 'Contacto Nuevo');
-    if (!name) return;
-    const phone = prompt('Número de teléfono o ID P2P:', '+54 9 11 5555-4321');
-    
-    const newId = `p2p_contact_${Date.now()}`;
-    CONTACTS_DATA[newId] = {
-        name: name,
-        avatar: '👤',
-        status: `Tel: ${phone || 'Registrado en BBQ'}`
-    };
-
+    // Abre el flujo REAL de contactos (buscar por número en el directorio, importar
+    // agenda, invitar). Reemplaza el viejo prompt que creaba un contacto falso.
     closeModals();
-    selectMobileChat(newId);
-    switchMobileTab('chats');
-    alert(`🎉 ¡Contacto "${name}" agregado! Puedes enviarle mensajes cifrados por P2P.`);
+    if (window.BBQ && typeof window.BBQ.openAddContactModal === 'function') {
+        window.BBQ.openAddContactModal();
+        return;
+    }
+    alert('El sistema de contactos todavía se está iniciando. Probá de nuevo en unos segundos.');
 }
 
 function renderStorePicker() {

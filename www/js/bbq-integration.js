@@ -80,21 +80,14 @@
             });
         },
 
-        // ── UI: botón "+" y modal para agregar/invitar contactos ──
+        // ── UI: modal para agregar/invitar contactos ──
+        // El disparador es el FAB contextual EXISTENTE de la app (pestaña Chats →
+        // "Nuevo Número / Contacto"), que llama a openAddContactModal(). No inyectamos
+        // un FAB propio para no tapar el de la app.
         initContactsUI() {
-            const screen = document.getElementById('screenChatList');
-            if (screen && !document.getElementById('bbqAddContactFab')) {
-                const fab = document.createElement('button');
-                fab.id = 'bbqAddContactFab';
-                fab.title = 'Agregar contacto';
-                fab.textContent = '➕';
-                fab.style.cssText = `position:absolute; right:18px; bottom:80px; z-index:500;
-                    width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
-                    background:linear-gradient(90deg,#f59e0b,#f97316); color:#0b141a; font-size:1.4rem;
-                    box-shadow:0 6px 18px rgba(0,0,0,0.4);`;
-                fab.onclick = () => this.openAddContactModal();
-                screen.appendChild(fab);
-            }
+            // Limpieza defensiva: si quedó un FAB duplicado de una versión anterior, lo saco.
+            const stray = document.getElementById('bbqAddContactFab');
+            if (stray) stray.remove();
             this._buildAddContactModal();
         },
 
