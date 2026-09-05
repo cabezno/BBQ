@@ -146,28 +146,28 @@ class GooglePayEngine {
         }
 
         sheetOverlay.innerHTML = `
-            <div class="wa-modal-box font-inter" style="max-width:380px; border-radius:24px; border:1px solid #475569; padding:20px; background:#0f172a; box-shadow: 0 20px 50px rgba(0,0,0,0.8); animation: slideUpSheet 0.3s ease;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:12px; margin-bottom:14px;">
+            <div class="wa-modal-box font-inter" style="max-width:380px; border-radius:24px; border:1px solid var(--wa-border-light); padding:20px; background:var(--wa-header-bg); box-shadow: 0 20px 50px rgba(0,0,0,0.8); animation: slideUpSheet 0.3s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--wa-border-light); padding-bottom:12px; margin-bottom:14px;">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-size:1.4rem; font-weight:900; background:linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">GPay</span>
-                        <span style="font-size:0.75rem; background:#334155; color:#94a3b8; padding:2px 6px; border-radius:6px;">Auth & Hold</span>
+                        <span style="font-size:0.75rem; background:var(--wa-incoming-bg); color:var(--wa-text-secondary); padding:2px 6px; border-radius:6px;">Auth & Hold</span>
                     </div>
-                    <button class="icon-btn-m" id="btnCloseGPaySheet" style="color:#94a3b8;">✕</button>
+                    <button class="icon-btn-m" id="btnCloseGPaySheet" style="color:var(--wa-text-secondary);">✕</button>
                 </div>
 
                 <div style="margin-bottom:16px;">
-                    <div style="font-size:0.75rem; color:#94a3b8;">Comprando en</div>
-                    <div style="font-size:0.95rem; font-weight:bold; color:#f8fafc;">BBQ P2P Store 🏬</div>
-                    <div style="font-size:0.8rem; color:#cbd5e1; margin-top:2px;">${description}</div>
+                    <div style="font-size:0.75rem; color:var(--wa-text-secondary);">Comprando en</div>
+                    <div style="font-size:0.95rem; font-weight:bold; color:var(--wa-text-primary);">BBQ P2P Store 🏬</div>
+                    <div style="font-size:0.8rem; color:var(--wa-text-secondary); margin-top:2px;">${description}</div>
                 </div>
 
                 <!-- Método de Pago Seleccionado (Tarjeta Google Wallet) -->
-                <div style="background:#1e293b; border:1px solid #334155; border-radius:14px; padding:12px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="background:var(--wa-incoming-bg); border:1px solid var(--wa-border-light); border-radius:14px; padding:12px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div style="width:36px; height:24px; background:#0284c7; border-radius:4px; color:#fff; font-weight:bold; font-size:0.65rem; display:flex; align-items:center; justify-content:center; letter-spacing:0.5px;">VISA</div>
                         <div>
-                            <div style="font-size:0.82rem; font-weight:600; color:#f8fafc;">Google Wallet (•••• 4242)</div>
-                            <div style="font-size:0.7rem; color:#94a3b8;">Protegido con Token Criptográfico</div>
+                            <div style="font-size:0.82rem; font-weight:600; color:var(--wa-text-primary);">Google Wallet (•••• 4242)</div>
+                            <div style="font-size:0.7rem; color:var(--wa-text-secondary);">Protegido con Token Criptográfico</div>
                         </div>
                     </div>
                     <span style="color:#38bdf8; font-size:0.8rem;">✓</span>
@@ -177,7 +177,7 @@ class GooglePayEngine {
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:#0284c715; border:1px solid #0284c740; padding:10px 14px; border-radius:12px;">
                     <div>
                         <div style="font-size:0.7rem; color:#7dd3fc;">Monto Total a Pre-Autorizar</div>
-                        <div style="font-size:0.68rem; color:#94a3b8;">Retención sin cargos definitivos</div>
+                        <div style="font-size:0.68rem; color:var(--wa-text-secondary);">Retención sin cargos definitivos</div>
                     </div>
                     <div style="font-size:1.3rem; font-weight:900; color:#38bdf8;">$${amount.toFixed(2)} <span style="font-size:0.75rem;">USD</span></div>
                 </div>
@@ -188,7 +188,7 @@ class GooglePayEngine {
                     <span>Autorizar $${amount.toFixed(2)} USD</span>
                 </button>
 
-                <div style="text-align:center; margin-top:12px; font-size:0.68rem; color:#64748b; display:flex; align-items:center; justify-content:center; gap:4px;">
+                <div style="text-align:center; margin-top:12px; font-size:0.68rem; color:var(--wa-text-secondary); display:flex; align-items:center; justify-content:center; gap:4px;">
                     <span>🔒 Verificación Biométrica / Passkey Google</span>
                 </div>
             </div>
