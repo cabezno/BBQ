@@ -53,6 +53,22 @@
         initNetListener() {
             if (!window.BBQNet) return;
             window.BBQNet.onMessage(async (fromPeerId, msg) => {
+                // Vivos: aviso de inicio/fin de transmisión de un contacto.
+                if (msg && (msg.type === 'live_start' || msg.type === 'live_end')) {
+                    window.LIVE_HOSTS = window.LIVE_HOSTS || {};
+                    const info = msg.message || {};
+                    const hostId = info.hostId || fromPeerId;
+                    if (msg.type === 'live_start') {
+                        const name = info.hostName || (typeof CONTACTS_DATA !== 'undefined' && CONTACTS_DATA[hostId] && CONTACTS_DATA[hostId].name) || 'Contacto';
+                        window.LIVE_HOSTS[hostId] = { hostName: name, product: info.product };
+                        bbqToast('🔴 ' + name + ' está en vivo');
+                    } else {
+                        delete window.LIVE_HOSTS[hostId];
+                    }
+                    if (typeof initInstagramStoriesBar === 'function') initInstagramStoriesBar();
+                    return;
+                }
+
                 if (!msg || (msg.type !== 'chat' && msg.type !== 'voice') || !msg.message) return;
 
                 // Asegurar que el remitente exista como contacto

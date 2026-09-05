@@ -1,145 +1,169 @@
 /**
- * NEXUS P2P - Live Streams & Media Recording Engine
- * Enables P2P Live Shopping, Local MediaRecorder Video Capturing,
- * and Real-time Floating Emoji Reactions & Chat.
+ * BBQ - Vivos P2P (Live Shopping) REAL por WebRTC
+ *
+ * El anfitrión transmite su cámara+micrófono DIRECTO a cada espectador (una conexión
+ * de media por espectador). La señalización (offer/answer/ICE) viaja por BBQNet con
+ * data.ns='media'. El descubrimiento: al ir en vivo se avisa a los contactos conectados.
+ *
+ * Límite honesto: es malla 1→N; el celular del anfitrión aguanta pocos espectadores
+ * (para audiencias grandes haría falta un servidor de media/SFU).
  */
 class P2PLiveEngine {
     constructor() {
-        this.activeStream = null;
+        this.localStream = null;
+        this.isHosting = false;
+        this.isViewing = false;
+        this.viewers = new Map();   // viewerPeerId -> RTCPeerConnection (lado anfitrión)
+        this.viewerPc = null;       // RTCPeerConnection (lado espectador)
+        this.currentHostId = null;
         this.mediaRecorder = null;
         this.recordedChunks = [];
-        this.isBroadcasting = false;
         this.isRecording = false;
-        this.viewerCount = 14;
+        this.viewerCount = 0;
         this.pinnedProduct = null;
-        this.activeLiveSession = null;
-        this.initDefaultLiveSession();
+        this.iceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ];
+        this._initSignaling();
     }
 
-    initDefaultLiveSession() {
-        // Pre-loaded live stream session demo (TechZone Store Live)
-        this.activeLiveSession = {
-            id: 'live_techzone_1',
-            hostId: 'p2p_store_techzone',
-            hostName: 'TechZone Store 🏬',
-            hostAvatar: '🏬',
-            title: '🔥 Live Shopping & Demostración de Auriculares Hi-Fi Pro en Vivo',
-            viewerCount: 28,
-            pinnedProduct: {
-                id: 'prod_1',
-                name: 'Auriculares Hi-Fi Wireless Pro',
-                price: 100,
-                shippingFee: 15,
-                image: '🎧'
-            },
-            isLive: true,
-            timestamp: new Date().toISOString()
+    _initSignaling() {
+        const attach = () => {
+            if (window.BBQNet && window.BBQNet.onMediaSignal) {
+                window.BBQNet.onMediaSignal((from, data) => this._onMediaSignal(from, data));
+                return true;
+            }
+            return false;
         };
+        if (!attach()) {
+            const iv = setInterval(() => { if (attach()) clearInterval(iv); }, 500);
+        }
     }
 
+    // ─────────── ANFITRIÓN ───────────
     async startCameraStream(videoElementId) {
         try {
-            this.activeStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 720 }, height: { ideal: 1280 }, facingMode: 'user' },
+            this.localStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } },
                 audio: true
             });
-
-            const videoEl = document.getElementById(videoElementId);
-            if (videoEl) {
-                videoEl.srcObject = this.activeStream;
-                videoEl.play();
-            }
-
-            this.isBroadcasting = true;
-            return { success: true, stream: this.activeStream };
-        } catch (err) {
-            console.warn('Cámara física no disponible, utilizando simulación de lienzo para transmisión live.', err);
-            return this.startSimulatedLiveStream(videoElementId);
+        } catch (e) {
+            if (window.bbqToast) window.bbqToast('🎥 Sin permiso de cámara/micrófono');
+            return { success: false, error: e.message };
         }
+        this.isHosting = true;
+        this.viewers.clear();
+        this.viewerCount = 0;
+        const v = document.getElementById(videoElementId);
+        if (v) { v.srcObject = this.localStream; v.muted = true; v.play().catch(() => {}); }
+        this._notifyContacts('live_start');
+        this._updateViewerCount();
+        return { success: true, stream: this.localStream };
     }
 
-    startSimulatedLiveStream(videoElementId) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 720;
-        canvas.height = 1280;
-        const ctx = canvas.getContext('2d');
+    _notifyContacts(type) {
+        try {
+            if (!window.BBQNet) return;
+            const me = (window.BBQIdentity && window.BBQIdentity.getProfile && window.BBQIdentity.getProfile()) || {};
+            const ids = (typeof CONTACTS_DATA !== 'undefined')
+                ? Object.keys(CONTACTS_DATA).filter(id => CONTACTS_DATA[id] && CONTACTS_DATA[id].isReal) : [];
+            ids.forEach(pid => {
+                window.BBQNet.send(pid, {
+                    type,
+                    message: { hostId: window.MY_PEER_ID, hostName: me.name || 'Contacto', product: this.pinnedProduct }
+                }).catch(() => {});
+            });
+        } catch (e) {}
+    }
 
-        let frame = 0;
-        const renderFrame = () => {
-            if (!this.isBroadcasting) return;
-            frame++;
-
-            // Create colorful dynamic gradient background
-            const grad = ctx.createLinearGradient(0, 0, 720, 1280);
-            grad.addColorStop(0, '#121b22');
-            grad.addColorStop(0.5, '#004538');
-            grad.addColorStop(1, '#0b141a');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 720, 1280);
-
-            // Pulsing live camera focus circle
-            const radius = 120 + Math.sin(frame * 0.05) * 15;
-            ctx.beginPath();
-            ctx.arc(360, 500, radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 168, 132, 0.25)';
-            ctx.fill();
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#00a884';
-            ctx.stroke();
-
-            // Store Host Avatar
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '900 70px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('🏬', 360, 515);
-
-            ctx.font = '900 28px Inter, sans-serif';
-            ctx.fillText('🔴 TRANSMISIÓN P2P EN VIVO', 360, 700);
-
-            ctx.font = '300 20px Inter, sans-serif';
-            ctx.fillStyle = '#8696a0';
-            ctx.fillText('TechZone Store - Demostración en Vivo', 360, 740);
-            ctx.fillText(`Espectadores: ${this.viewerCount} conectados`, 360, 775);
-
-            requestAnimationFrame(renderFrame);
+    async _createViewerConnection(viewerId) {
+        if (!this.localStream) return;
+        const pc = new RTCPeerConnection({ iceServers: this.iceServers });
+        this.viewers.set(viewerId, pc);
+        this.localStream.getTracks().forEach(t => pc.addTrack(t, this.localStream));
+        pc.onicecandidate = (e) => {
+            if (e.candidate) window.BBQNet.sendSignal(viewerId, { ns: 'media', kind: 'ice', candidate: e.candidate });
         };
-
-        this.isBroadcasting = true;
-        renderFrame();
-
-        this.activeStream = canvas.captureStream(30);
-        const videoEl = document.getElementById(videoElementId);
-        if (videoEl) {
-            videoEl.srcObject = this.activeStream;
-            videoEl.play();
-        }
-
-        return { success: true, stream: this.activeStream, simulated: true };
+        pc.onconnectionstatechange = () => {
+            if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) {
+                this.viewers.delete(viewerId);
+                this._updateViewerCount();
+            }
+        };
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        window.BBQNet.sendSignal(viewerId, { ns: 'media', kind: 'offer', sdp: pc.localDescription });
+        this._updateViewerCount();
     }
 
-    startRecording() {
-        if (!this.activeStream) return { success: false, error: 'No hay flujo de transmisión activo' };
+    _updateViewerCount() {
+        this.viewerCount = this.viewers.size;
+        const el = document.getElementById('hostLiveViewerCount');
+        if (el) el.textContent = `👥 ${this.viewerCount} Espectadores conectados`;
+    }
 
+    // ─────────── ESPECTADOR ───────────
+    async watch(hostId, videoElementId) {
+        this.isViewing = true;
+        this.currentHostId = hostId;
+        this.viewerPc = new RTCPeerConnection({ iceServers: this.iceServers });
+        this.viewerPc.ontrack = (e) => {
+            const v = document.getElementById(videoElementId);
+            if (v && e.streams && e.streams[0]) { v.srcObject = e.streams[0]; v.play().catch(() => {}); }
+        };
+        this.viewerPc.onicecandidate = (e) => {
+            if (e.candidate) window.BBQNet.sendSignal(hostId, { ns: 'media', kind: 'ice', candidate: e.candidate });
+        };
+        window.BBQNet.sendSignal(hostId, { ns: 'media', kind: 'watch' });
+        return { success: true };
+    }
+
+    async _handleHostOffer(from, data) {
+        if (!this.viewerPc || from !== this.currentHostId) return;
+        await this.viewerPc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        const answer = await this.viewerPc.createAnswer();
+        await this.viewerPc.setLocalDescription(answer);
+        window.BBQNet.sendSignal(from, { ns: 'media', kind: 'answer', sdp: this.viewerPc.localDescription });
+    }
+
+    // ─────────── Señalización de media ───────────
+    async _onMediaSignal(from, data) {
+        try {
+            if (data.kind === 'watch' && this.isHosting) {
+                await this._createViewerConnection(from);
+            } else if (data.kind === 'answer' && this.isHosting && this.viewers.has(from)) {
+                await this.viewers.get(from).setRemoteDescription(new RTCSessionDescription(data.sdp));
+            } else if (data.kind === 'offer' && this.isViewing) {
+                await this._handleHostOffer(from, data);
+            } else if (data.kind === 'ice') {
+                if (this.isHosting && this.viewers.has(from)) {
+                    await this.viewers.get(from).addIceCandidate(new RTCIceCandidate(data.candidate));
+                } else if (this.isViewing && this.viewerPc) {
+                    await this.viewerPc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                }
+            } else if (data.kind === 'stop' && this.isViewing) {
+                this.stopStream();
+                if (window.bbqToast) window.bbqToast('El vivo terminó');
+            }
+        } catch (e) {
+            console.warn('[LIVE] Error en señalización de media:', e);
+        }
+    }
+
+    // ─────────── Grabación local (anfitrión) ───────────
+    startRecording() {
+        if (!this.localStream) return { success: false, error: 'No hay transmisión activa' };
         this.recordedChunks = [];
         try {
             const options = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm' };
-            this.mediaRecorder = new MediaRecorder(this.activeStream, options);
-
-            this.mediaRecorder.ondataavailable = (event) => {
-                if (event.data && event.data.size > 0) {
-                    this.recordedChunks.push(event.data);
-                }
-            };
-
-            this.mediaRecorder.onstop = () => {
-                this.saveRecordingToFile();
-            };
-
+            this.mediaRecorder = new MediaRecorder(this.localStream, options);
+            this.mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) this.recordedChunks.push(e.data); };
+            this.mediaRecorder.onstop = () => this.saveRecordingToFile();
             this.mediaRecorder.start(1000);
             this.isRecording = true;
             return { success: true };
         } catch (e) {
-            console.error('Error al iniciar MediaRecorder:', e);
             return { success: false, error: e.message };
         }
     }
@@ -155,51 +179,50 @@ class P2PLiveEngine {
 
     saveRecordingToFile() {
         if (this.recordedChunks.length === 0) return;
-
         const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = `bbq_live_recording_${Date.now()}.webm`;
+        a.download = `bbq_live_${Date.now()}.webm`;
         document.body.appendChild(a);
         a.click();
-        setTimeout(() => {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }, 100);
-
-        alert('📹 ¡GRABACIÓN COMPLETADA!\n\nEl video del Vivo P2P se ha descargado automáticamente a tu dispositivo.');
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+        if (window.bbqToast) window.bbqToast('📹 Grabación descargada');
     }
 
+    // ─────────── Fin ───────────
     stopStream() {
-        if (this.isRecording) {
-            this.stopRecording();
+        if (this.isRecording) this.stopRecording();
+        if (this.isHosting) {
+            if (window.BBQNet) {
+                this.viewers.forEach((pc, vid) => {
+                    try { window.BBQNet.sendSignal(vid, { ns: 'media', kind: 'stop' }); } catch (e) {}
+                    try { pc.close(); } catch (e) {}
+                });
+            }
+            this.viewers.clear();
+            this._notifyContacts('live_end');
         }
-        this.isBroadcasting = false;
-        if (this.activeStream) {
-            this.activeStream.getTracks().forEach(track => track.stop());
-            this.activeStream = null;
-        }
+        if (this.viewerPc) { try { this.viewerPc.close(); } catch (e) {} this.viewerPc = null; }
+        if (this.localStream) { this.localStream.getTracks().forEach(t => t.stop()); this.localStream = null; }
+        this.isHosting = false;
+        this.isViewing = false;
+        this.currentHostId = null;
+        this.viewerCount = 0;
     }
 
+    // ─────────── Reacciones flotantes ───────────
     sendFloatingEmoji(emoji, containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
-
         const el = document.createElement('div');
         el.className = 'floating-emoji-item';
         el.textContent = emoji;
-
-        // Random horizontal drift
         const randomX = Math.floor(Math.random() * 60) - 30;
         el.style.right = `${20 + randomX}px`;
-
         container.appendChild(el);
-
-        setTimeout(() => {
-            if (el.parentNode) el.parentNode.removeChild(el);
-        }, 2200);
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2200);
     }
 }
 

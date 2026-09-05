@@ -1625,14 +1625,22 @@ function initInstagramStoriesBar() {
             <span class="story-label font-inter-light">Tu estado</span>
         </div>
 
-        <!-- EN VIVO P2P Bubble -->
-        <div class="story-item-bubble" onclick="openLiveViewer('live_techzone_1')">
-            <div class="story-avatar-container story-ring-live">
-                <div class="story-avatar-img">🏬</div>
-            </div>
-            <span class="story-label font-inter-black text-danger">🔴 EN VIVO</span>
-        </div>
     `;
+
+    // Vivos REALES en curso (contactos que están transmitiendo ahora).
+    const liveHosts = window.LIVE_HOSTS || {};
+    Object.keys(liveHosts).forEach(hostId => {
+        const h = liveHosts[hostId];
+        const nombre = (h.hostName || 'En vivo').split(' ')[0];
+        html += `
+            <div class="story-item-bubble" onclick="openLiveViewer('${hostId}')">
+                <div class="story-avatar-container story-ring-live">
+                    <div class="story-avatar-img">📹</div>
+                </div>
+                <span class="story-label font-inter-black text-danger">🔴 ${nombre}</span>
+            </div>
+        `;
+    });
 
     statuses.forEach(st => {
         const ringClass = st.isStore ? 'story-ring-store' : 'story-ring-contact';
@@ -2353,9 +2361,13 @@ function handleHostFlipCamera() {
     alert('🔄 Alternando entre Cámara Frontal y Trasera del Dispositivo...');
 }
 
-function openLiveViewer(liveId) {
+function openLiveViewer(hostId) {
+    const live = (window.LIVE_HOSTS || {})[hostId];
     openModal('modalLiveBroadcastViewer');
-    window.p2pLiveEngine.startSimulatedLiveStream('viewerLiveVideoElement');
+    // Mostrar el nombre del anfitrión y su producto fijado (si lo mandó).
+    const titleEl = document.getElementById('viewerLiveHostTitle');
+    if (titleEl && live) titleEl.textContent = live.hostName || 'En vivo';
+    window.p2pLiveEngine.watch(hostId, 'viewerLiveVideoElement');
 }
 
 function closeLiveViewer() {

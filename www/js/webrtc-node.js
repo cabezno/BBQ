@@ -22,6 +22,7 @@
         peers: new Map(),        // peerId → { pc, channel, ready }
         msgListeners: [],
         stateListeners: [],
+        mediaSignalListeners: [], // para Vivos (streaming de cámara)
         _reconnectDelay: 1000,
 
         // ── Init: conecta la señalización y se anuncia ──
@@ -32,6 +33,9 @@
 
         onMessage(cb) { this.msgListeners.push(cb); },
         onPeerState(cb) { this.stateListeners.push(cb); },
+        onMediaSignal(cb) { this.mediaSignalListeners.push(cb); },
+        // Enviar señalización arbitraria a un peer (lo usa el motor de Vivos con data.ns='media').
+        sendSignal(to, data) { this._signal(to, data); },
 
         _emitMessage(fromPeerId, msg) { this.msgListeners.forEach(fn => fn(fromPeerId, msg)); },
         _emitState(peerId, state) { this.stateListeners.forEach(fn => fn(peerId, state)); },
@@ -138,6 +142,14 @@
         async _onSignal(m) {
             const from = m.from;
             const data = m.data || {};
+
+            // Multiplexado: la señalización de media (Vivos) se enruta al motor de Vivos,
+            // no a la conexión de datos.
+            if (data.ns === 'media') {
+                this.mediaSignalListeners.forEach(fn => fn(from, data));
+                return;
+            }
+
             const entry = this._getPeer(from);
 
             if (data.kind === 'offer') {
