@@ -32,6 +32,9 @@ tmp/
 # Datos del servidor (directorio de usuarios)
 directory.json
 
+# Puente local Claude (herramienta local, contiene token)
+claude-bridge.js
+
 # Capacitor (proyectos nativos generados)
 /android/
 /ios/

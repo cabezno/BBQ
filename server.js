@@ -48,6 +48,9 @@ let directory = {}; // phoneNormalized → { phone, name, peerId, publicKey, upd
 const CLAUDE_TOKEN = process.env.CLAUDE_TOKEN || 'bbq-bridge-7k2p';
 let claudeInbox = [];
 let claudeSeq = 0;
+// Buzón corto SOLO para respuestas del asistente Claude: si el destinatario está
+// desconectado (app en segundo plano), se guardan y se entregan al reconectar.
+let pendingReplies = {}; // peerId → [payload, ...]
 
 // Contactos-bot siempre presentes en el directorio (aunque se reinicie el server).
 function seedBots() {
@@ -220,16 +223,16 @@ app.get('/api/claude/inbox', (req, res) => {
 app.post('/api/claude/reply', (req, res) => {
     const { token, to, text } = req.body || {};
     if (token !== CLAUDE_TOKEN) return res.status(403).json({ ok: false });
+    const payload = { type: 'CHAT_RELAY', from: 'bbq_claude', payload: { type: 'chat', message: { id: 'claude_' + Date.now(), sender: 'bbq_claude', text: text || '', timestamp: new Date().toISOString() } } };
     const target = onlinePeers.get(to);
     if (target && target.readyState === WebSocket.OPEN) {
-        target.send(JSON.stringify({
-            type: 'CHAT_RELAY',
-            from: 'bbq_claude',
-            payload: { type: 'chat', message: { id: 'claude_' + Date.now(), sender: 'bbq_claude', text: text || '', timestamp: new Date().toISOString() } }
-        }));
+        target.send(JSON.stringify(payload));
         return res.json({ ok: true, delivered: true });
     }
-    res.json({ ok: true, delivered: false, reason: 'peer offline' });
+    // Offline: guardar y entregar al reconectar.
+    (pendingReplies[to] = pendingReplies[to] || []).push(payload);
+    if (pendingReplies[to].length > 50) pendingReplies[to] = pendingReplies[to].slice(-50);
+    res.json({ ok: true, delivered: false, queued: true });
 });
 
 // ── Estado del servidor ──
@@ -277,6 +280,13 @@ wss.on('connection', (ws, req) => {
                 onlinePeers.set(myPeerId, ws);
                 console.log(`\x1b[32m[WS] Online: ${myPeerId} (${onlinePeers.size} conectados)\x1b[0m`);
                 ws.send(JSON.stringify({ type: 'HELLO-ACK', peersOnline: onlinePeers.size }));
+                // Entregar respuestas de Claude que quedaron pendientes mientras estabas offline.
+                const pend = pendingReplies[myPeerId];
+                if (pend && pend.length) {
+                    pend.forEach(p => { try { ws.send(JSON.stringify(p)); } catch (e) {} });
+                    delete pendingReplies[myPeerId];
+                    console.log(`\x1b[35m[CLAUDE] entregadas ${pend.length} respuestas pendientes a ${myPeerId}\x1b[0m`);
+                }
             }
             return;
         }
