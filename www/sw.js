@@ -3,7 +3,7 @@
  * Cache-first strategy for static assets, network-first for API/WS
  */
 
-const CACHE_NAME = 'bbq-pwa-v26';
+const CACHE_NAME = 'bbq-pwa-v27';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -26,6 +26,8 @@ const STATIC_ASSETS = [
     '/js/workflow-ai.js',
     '/js/tts.js',
     '/js/stt.js',
+    '/js/bbq-flow.js',
+    '/js/bbq-flow-runner.js',
     '/js/onboarding.js',
     '/js/app.js',
     '/js/bbq-integration.js',

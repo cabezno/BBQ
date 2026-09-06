@@ -19,6 +19,7 @@ const { WebSocketServer, WebSocket } = require('ws');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const BBQFlow = require('./www/js/bbq-flow.js'); // motor de flujos (isomórfico)
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,9 +49,18 @@ let directory = {}; // phoneNormalized → { phone, name, peerId, publicKey, upd
 const CLAUDE_TOKEN = process.env.CLAUDE_TOKEN || 'bbq-bridge-7k2p';
 let claudeInbox = [];
 let claudeSeq = 0;
-// Buzón corto SOLO para respuestas del asistente Claude: si el destinatario está
+// Buzón corto SOLO para respuestas de asistentes/agentes: si el destinatario está
 // desconectado (app en segundo plano), se guardan y se entregan al reconectar.
 let pendingReplies = {}; // peerId → [payload, ...]
+
+// ── Agentes/flujos: cola por agente + presencia de workers + flujos guardados ──
+let flows = {};          // id → flujo JSON (portable)
+let agentInbox = {};     // agentId → [{ id, from, text, ts }]
+let agentSeq = 0;
+let workerPresence = {}; // agentId → última vez que se vio su worker (ts)
+function seedFlows() {
+    if (!flows['store-assistant']) flows['store-assistant'] = BBQFlow.DEFAULT_STORE_FLOW;
+}
 
 // Contactos-bot siempre presentes en el directorio (aunque se reinicie el server).
 function seedBots() {
@@ -235,6 +245,52 @@ app.post('/api/claude/reply', (req, res) => {
     res.json({ ok: true, delivered: false, queued: true });
 });
 
+// ── Flujos de agentes (guardar/sincronizar; portables PC↔móvil) ──
+app.get('/api/flows', (req, res) => {
+    res.json({ ok: true, flows: Object.keys(flows).map(id => ({ id, name: flows[id].name || id })) });
+});
+app.get('/api/flows/:id', (req, res) => {
+    const f = flows[req.params.id];
+    if (!f) return res.status(404).json({ ok: false });
+    res.json({ ok: true, flow: f });
+});
+app.post('/api/flows', (req, res) => {
+    const flow = req.body && req.body.flow;
+    if (!flow || !flow.id) return res.status(400).json({ ok: false, error: 'Falta flow.id' });
+    const err = BBQFlow.validate(flow);
+    if (err) return res.status(400).json({ ok: false, error: err });
+    flows[flow.id] = flow;
+    res.json({ ok: true, id: flow.id });
+});
+
+// ── Cola genérica de agentes (los workers de PC la drenan) ──
+app.get('/api/agent/inbox', (req, res) => {
+    if (req.query.token !== CLAUDE_TOKEN) return res.status(403).json({ ok: false });
+    const id = req.query.agent;
+    if (id) workerPresence[id] = Date.now(); // el worker está vivo
+    const messages = (id && agentInbox[id]) || [];
+    if (id) agentInbox[id] = [];
+    res.json({ ok: true, messages });
+});
+app.post('/api/agent/reply', (req, res) => {
+    const { token, to, text, agent } = req.body || {};
+    if (token !== CLAUDE_TOKEN) return res.status(403).json({ ok: false });
+    const payload = { type: 'CHAT_RELAY', from: agent || 'agent', payload: { type: 'chat', message: { id: 'agent_' + Date.now(), sender: agent || 'agent', text: text || '', timestamp: new Date().toISOString() } } };
+    const target = onlinePeers.get(to);
+    if (target && target.readyState === WebSocket.OPEN) { target.send(JSON.stringify(payload)); return res.json({ ok: true, delivered: true }); }
+    (pendingReplies[to] = pendingReplies[to] || []).push(payload);
+    res.json({ ok: true, delivered: false, queued: true });
+});
+app.post('/api/agent/heartbeat', (req, res) => {
+    if ((req.body && req.body.token) !== CLAUDE_TOKEN) return res.status(403).json({ ok: false });
+    for (const a of (req.body.agents || [])) workerPresence[a] = Date.now();
+    res.json({ ok: true });
+});
+app.get('/api/agent/online', (req, res) => {
+    const ts = workerPresence[req.query.agent] || 0;
+    res.json({ ok: true, online: (Date.now() - ts) < 20000 });
+});
+
 // ── Estado del servidor ──
 app.get('/api/status', (req, res) => {
     res.json({
@@ -321,6 +377,13 @@ wss.on('connection', (ws, req) => {
         // Relay de chat por WS (respaldo cuando WebRTC no conecta). Transitorio: no se guarda.
         // CHAT_RELAY { to, from, payload }  (payload = {type:'chat'|'voice'|'attachment', message, ...})
         if (msg.type === 'CHAT_RELAY' && msg.to) {
+            // Agente genérico (worker de PC lo atiende): encolar en su cola.
+            if (typeof msg.to === 'string' && msg.to.indexOf('agent_') === 0) {
+                const incoming = msg.payload && msg.payload.message;
+                (agentInbox[msg.to] = agentInbox[msg.to] || []).push({ id: ++agentSeq, from: msg.from, text: (incoming && incoming.text) || '', ts: Date.now() });
+                if (agentInbox[msg.to].length > 200) agentInbox[msg.to] = agentInbox[msg.to].slice(-200);
+                return;
+            }
             // Puente Claude: encolar el mensaje para que Claude (en la PC) lo lea y responda.
             if (msg.to === 'bbq_claude') {
                 const incoming = msg.payload && msg.payload.message;
@@ -382,6 +445,7 @@ function getLanAddresses() {
 
 loadDirectory();
 seedBots(); // asegurar los contactos "BBQ Test" y "Claude" siempre presentes
+seedFlows(); // flujo de agente por defecto (asistente de tienda)
 
 server.listen(PORT, '0.0.0.0', () => {
     const lan = getLanAddresses();

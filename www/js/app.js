@@ -265,6 +265,45 @@ async function handleAiWorkflowRule() {
     }
 }
 
+// Editor simple del flujo del agente (JSON). El flujo corre igual en PC o móvil.
+async function openFlowEditor() {
+    let ov = document.getElementById('bbqFlowEditor');
+    if (!ov) { ov = document.createElement('div'); ov.id = 'bbqFlowEditor'; document.body.appendChild(ov); }
+    ov.style.cssText = 'position:fixed; inset:0; z-index:190000; background:rgba(0,0,0,0.7); display:flex; align-items:flex-end; justify-content:center; font-family:Inter,system-ui,sans-serif;';
+    ov.innerHTML = `<div style="background:var(--wa-header-bg); color:var(--wa-text-primary); width:100%; max-width:480px; border-radius:20px 20px 0 0; padding:16px; max-height:85vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-weight:900;">✏️ Flujo del agente (JSON)</div>
+            <button onclick="document.getElementById('bbqFlowEditor').remove()" style="background:none;border:none;color:var(--wa-text-secondary);font-size:1.3rem;cursor:pointer;">✕</button>
+        </div>
+        <div style="font-size:0.72rem; color:var(--wa-text-secondary); margin-bottom:8px;">Etapas acotadas (classify / llm / reply / tool). Corre igual en el worker de PC o en el móvil.</div>
+        <textarea id="bbqFlowJson" spellcheck="false" style="flex:1; min-height:240px; width:100%; border-radius:12px; border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); font-family:monospace; font-size:0.75rem; padding:10px; outline:none;">Cargando…</textarea>
+        <div id="bbqFlowMsg" style="font-size:0.75rem; min-height:18px; margin-top:6px;"></div>
+        <button onclick="saveFlowEditor()" class="btn-wa-primary" style="width:100%; margin-top:8px;">Guardar flujo</button>
+    </div>`;
+    try {
+        const r = await fetch(`${window.BBQ_SERVER}/api/flows/store-assistant`);
+        const j = await r.json();
+        const flow = j.ok ? j.flow : (window.BBQFlow && window.BBQFlow.DEFAULT_STORE_FLOW);
+        document.getElementById('bbqFlowJson').value = JSON.stringify(flow, null, 2);
+    } catch (e) {
+        document.getElementById('bbqFlowJson').value = JSON.stringify((window.BBQFlow && window.BBQFlow.DEFAULT_STORE_FLOW) || {}, null, 2);
+    }
+}
+
+async function saveFlowEditor() {
+    const msg = document.getElementById('bbqFlowMsg');
+    let flow;
+    try { flow = JSON.parse(document.getElementById('bbqFlowJson').value); }
+    catch (e) { msg.style.color = '#f87171'; msg.textContent = 'JSON inválido: ' + e.message; return; }
+    if (window.BBQFlow) { const err = window.BBQFlow.validate(flow); if (err) { msg.style.color = '#f87171'; msg.textContent = err; return; } }
+    try {
+        const r = await fetch(`${window.BBQ_SERVER}/api/flows`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ flow }) });
+        const j = await r.json();
+        if (j.ok) { msg.style.color = '#22c55e'; msg.textContent = '✅ Flujo guardado (' + j.id + ')'; }
+        else { msg.style.color = '#f87171'; msg.textContent = 'Error: ' + (j.error || '?'); }
+    } catch (e) { msg.style.color = '#f87171'; msg.textContent = 'Error: ' + e.message; }
+}
+
 function renderAutomationsModal() {
     const container = document.getElementById('automationsList');
     if (!container) return;
@@ -636,20 +675,44 @@ function sendMessage(textOverride = null) {
 
     if (inputEl) inputEl.value = '';
 
-    // Contacto REAL (P2P por WebRTC): guardar local + enviar directo al peer.
+    // Contacto REAL (P2P/relay) o AGENTE (flujo): guardar local + enrutar.
     const activeContact = CONTACTS_DATA[currentChatId];
     if (activeContact && activeContact.isReal) {
+        const cid = currentChatId;
         const msg = {
             id: 'm_' + Date.now(),
             sender: window.MY_PEER_ID,
             text: text,
             timestamp: new Date().toISOString()
         };
-        window.buyerStorage.appendChatMessage(currentChatId, msg);
+        window.buyerStorage.appendChatMessage(cid, msg);
         renderMobileMessages();
         renderMobileChatList();
+
+        // ¿Es un AGENTE (tienda/asistente con flujo)? → routing worker/móvil.
+        if (typeof cid === 'string' && cid.indexOf('agent_') === 0 && window.BBQFlowRunner) {
+            window.BBQFlowRunner.isWorkerOnline(cid).then(online => {
+                if (online && window.BBQNet) {
+                    // El worker de PC atiende y responde.
+                    window.BBQNet.send(cid, { type: 'chat', message: msg });
+                } else {
+                    // El teléfono corre el MISMO flujo localmente (on-device / API).
+                    if (window.bbqToast) window.bbqToast('🤖 El agente responde desde el teléfono…');
+                    window.BBQFlowRunner.runAgentLocally(cid, text, (replyText) => {
+                        const inMsg = { id: 'ag_' + Date.now(), sender: cid, text: replyText, timestamp: new Date().toISOString() };
+                        window.buyerStorage.appendChatMessage(cid, inMsg);
+                        if (currentChatId === cid) renderMobileMessages();
+                        renderMobileChatList();
+                    });
+                }
+            });
+            hideAttachPopup();
+            return;
+        }
+
+        // Contacto humano normal.
         if (window.BBQNet) {
-            window.BBQNet.send(currentChatId, { type: 'chat', message: msg }).then(r => {
+            window.BBQNet.send(cid, { type: 'chat', message: msg }).then(r => {
                 if (!r.ok && window.bbqToast) window.bbqToast('⚠️ No entregado (contacto offline)');
             });
         }
