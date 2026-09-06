@@ -18,14 +18,49 @@ const http = require('http');
 const { WebSocketServer, WebSocket } = require('ws');
 const path = require('path');
 const os = require('os');
-const fs = require('fs');
+const { webcrypto, randomBytes } = require('crypto');
+const subtle = webcrypto.subtle;
 const BBQFlow = require('./www/js/bbq-flow.js'); // motor de flujos (isomórfico)
+const store = require('./store.js');             // persistencia del directorio (Upstash/archivo)
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DIRECTORY_FILE = path.join(__dirname, 'directory.json');
 
 app.use(express.json({ limit: '256kb' }));
+
+/* ══════════════════════════════════════════════════════════════
+   AUTENTICACIÓN POR CLAVE DE DISPOSITIVO (firma ECDSA P-256)
+   ──────────────────────────────────────────────────────────────
+   La identidad real es un par de claves ECDSA en el teléfono (privada NO
+   exportable). El peerId es el hash de la pública ⇒ nadie puede reclamar un
+   peerId sin tener la privada que lo genera. El server verifica firmas y así:
+     · /api/register solo acepta registros firmados por su propia clave.
+     · el HELLO del WebSocket exige un reto firmado (challenge-response)
+       antes de dar por online a un peer o reenviarle nada.
+   ══════════════════════════════════════════════════════════════ */
+function b64ToBuf(b64) { return Buffer.from(String(b64 || ''), 'base64'); }
+
+// peerId determinista a partir de la clave pública de firma (igual que el cliente).
+async function peerIdFromSignPub(signPubB64) {
+    const raw = b64ToBuf(signPubB64);
+    if (!raw.length) return null;
+    const h = await subtle.digest('SHA-256', raw);
+    return 'bbq_' + Buffer.from(h).toString('hex').slice(0, 24);
+}
+
+// Verifica una firma ECDSA(SHA-256) sobre `dataStr` con la pública dada (raw b64).
+async function verifySig(signPubB64, dataStr, sigB64) {
+    try {
+        const key = await subtle.importKey(
+            'raw', b64ToBuf(signPubB64),
+            { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
+        );
+        return await subtle.verify(
+            { name: 'ECDSA', hash: 'SHA-256' }, key,
+            b64ToBuf(sigB64), Buffer.from(String(dataStr), 'utf8')
+        );
+    } catch (e) { return false; }
+}
 
 // ─── Static Files (la web app vive en /www) ─────────────────────
 app.use(express.static(path.join(__dirname, 'www'), {
@@ -68,29 +103,19 @@ function seedBots() {
     directory['5491100000007'] = { phone: '5491100000007', name: '🤖 Claude (BBQ)', peerId: 'bbq_claude', publicKey: 'CLAUDEKEY', updatedAt: new Date().toISOString() };
 }
 
-function loadDirectory() {
+async function loadDirectory() {
     try {
-        if (fs.existsSync(DIRECTORY_FILE)) {
-            directory = JSON.parse(fs.readFileSync(DIRECTORY_FILE, 'utf8')) || {};
-            console.log(`\x1b[36m[DIR] Directorio cargado: ${Object.keys(directory).length} usuarios\x1b[0m`);
-        }
+        directory = await store.loadAll();
+        console.log(`\x1b[36m[DIR] Directorio cargado (${store.backend()}): ${Object.keys(directory).length} usuarios\x1b[0m`);
     } catch (e) {
         console.error('[DIR] Error cargando directorio:', e.message);
         directory = {};
     }
 }
 
-let saveTimer = null;
-function saveDirectory() {
-    // Debounce para no escribir en disco en cada request
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-        try {
-            fs.writeFileSync(DIRECTORY_FILE, JSON.stringify(directory, null, 2));
-        } catch (e) {
-            console.error('[DIR] Error guardando directorio:', e.message);
-        }
-    }, 500);
+// Persiste una entrada del directorio (fire-and-forget; no bloquea la respuesta).
+function persistUser(key) {
+    store.put(key, directory[key]).catch(e => console.error('[DIR] Error persistiendo:', e.message));
 }
 
 // Normaliza un teléfono a solo dígitos (con código de país si viene con +)
@@ -101,23 +126,47 @@ function normalizePhone(raw) {
     return s.replace(/\D/g, '');
 }
 
-// ── Registro / actualización de identidad ──
-// Body: { phone, name, peerId, publicKey }
-app.post('/api/register', (req, res) => {
-    const { phone, name, peerId, publicKey } = req.body || {};
+// ── Registro / actualización de identidad (FIRMADO) ──
+// Body: { phone, name, peerId, signPublicKey, ecdhPublicKey, ts, sig }
+// El cliente firma `${peerId}|${telefonoNormalizado}|${ts}` con su clave privada.
+app.post('/api/register', async (req, res) => {
+    const { phone, name, peerId, signPublicKey, ecdhPublicKey, ts, sig } = req.body || {};
     const key = normalizePhone(phone);
     if (!key || key.length < 6) {
         return res.status(400).json({ ok: false, error: 'Teléfono inválido' });
     }
+    if (!signPublicKey || !sig || !peerId) {
+        return res.status(400).json({ ok: false, error: 'Faltan credenciales de firma' });
+    }
+    // 1) Anti-replay: el registro debe ser reciente (±2 min).
+    if (!ts || Math.abs(Date.now() - Number(ts)) > 120000) {
+        return res.status(400).json({ ok: false, error: 'Registro caducado (revisá la hora del dispositivo)' });
+    }
+    // 2) El peerId TIENE que ser el hash de la clave pública (identidad autoautenticante).
+    const expected = await peerIdFromSignPub(signPublicKey);
+    if (expected !== peerId) {
+        return res.status(403).json({ ok: false, error: 'peerId no corresponde a la clave' });
+    }
+    // 3) La firma prueba que el cliente posee la clave privada.
+    const ok = await verifySig(signPublicKey, `${peerId}|${key}|${ts}`, sig);
+    if (!ok) {
+        return res.status(403).json({ ok: false, error: 'Firma inválida' });
+    }
+    // 4) El número es solo una etiqueta: primero que llega lo toma; otra identidad no lo pisa.
+    if (directory[key] && directory[key].peerId && directory[key].peerId !== peerId) {
+        return res.status(409).json({ ok: false, error: 'Ese número ya está tomado por otra identidad' });
+    }
     directory[key] = {
         phone: key,
         name: (name || 'Usuario BBQ').toString().slice(0, 60),
-        peerId: (peerId || '').toString().slice(0, 128),
-        publicKey: (publicKey || '').toString().slice(0, 2048),
+        peerId: peerId.toString().slice(0, 128),
+        signPublicKey: signPublicKey.toString().slice(0, 512),
+        publicKey: (ecdhPublicKey || '').toString().slice(0, 2048), // ECDH para E2E (compat con campo previo)
+        ecdhPublicKey: (ecdhPublicKey || '').toString().slice(0, 2048),
         updatedAt: new Date().toISOString()
     };
-    saveDirectory();
-    console.log(`\x1b[32m[DIR] Registrado: ${key} (${directory[key].name})\x1b[0m`);
+    persistUser(key);
+    console.log(`\x1b[32m[DIR] Registrado (firmado): ${key} (${directory[key].name})\x1b[0m`);
     res.json({ ok: true, user: directory[key] });
 });
 
@@ -130,7 +179,7 @@ app.post('/api/contacts/match', (req, res) => {
         const key = normalizePhone(p);
         if (key && directory[key]) {
             const u = directory[key];
-            matches.push({ phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey });
+            matches.push({ phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey });
         }
     }
     res.json({ ok: true, matches });
@@ -141,7 +190,7 @@ app.get('/api/user/:phone', (req, res) => {
     const key = normalizePhone(req.params.phone);
     const u = directory[key];
     if (!u) return res.status(404).json({ ok: false, error: 'No encontrado' });
-    res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey } });
+    res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey } });
 });
 
 // ── Proxy de IA (evita CORS de los proveedores; la API key la manda el cliente) ──
@@ -330,30 +379,56 @@ function broadcastPresence(type, peerId) {
 
 wss.on('connection', (ws, req) => {
     let myPeerId = null;
+    let authed = false;
+    let pendingAuth = null; // { peerId, signPublicKey, nonce }
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     console.log(`\x1b[36m[WS] Conexión desde ${ip}\x1b[0m`);
 
-    ws.on('message', (raw) => {
+    // Da por online al peer YA autenticado: lo registra, avisa presencia y entrega pendientes.
+    function goOnline() {
+        onlinePeers.set(myPeerId, ws);
+        console.log(`\x1b[32m[WS] Online: ${myPeerId} (${onlinePeers.size} conectados)\x1b[0m`);
+        ws.send(JSON.stringify({ type: 'HELLO-ACK', peersOnline: onlinePeers.size }));
+        const pend = pendingReplies[myPeerId];
+        if (pend && pend.length) {
+            pend.forEach(p => { try { ws.send(JSON.stringify(p)); } catch (e) {} });
+            delete pendingReplies[myPeerId];
+            console.log(`\x1b[35m[BRIDGE] entregadas ${pend.length} respuestas pendientes a ${myPeerId}\x1b[0m`);
+        }
+        broadcastPresence('PEER_ONLINE', myPeerId);
+    }
+
+    ws.on('message', async (raw) => {
         let msg;
         try { msg = JSON.parse(raw.toString()); } catch { return; }
 
-        // Registrar el peerId de esta conexión (para señalización dirigida)
+        // ── Paso 1: HELLO { peerId, signPublicKey } → el server manda un reto ──
         if (msg.type === 'HELLO') {
-            myPeerId = msg.peerId;
-            if (myPeerId) {
-                onlinePeers.set(myPeerId, ws);
-                console.log(`\x1b[32m[WS] Online: ${myPeerId} (${onlinePeers.size} conectados)\x1b[0m`);
-                ws.send(JSON.stringify({ type: 'HELLO-ACK', peersOnline: onlinePeers.size }));
-                // Entregar respuestas de Claude que quedaron pendientes mientras estabas offline.
-                const pend = pendingReplies[myPeerId];
-                if (pend && pend.length) {
-                    pend.forEach(p => { try { ws.send(JSON.stringify(p)); } catch (e) {} });
-                    delete pendingReplies[myPeerId];
-                    console.log(`\x1b[35m[CLAUDE] entregadas ${pend.length} respuestas pendientes a ${myPeerId}\x1b[0m`);
-                }
-                // Avisar a los demás que este peer se conectó (para que vacíen su outbox).
-                broadcastPresence('PEER_ONLINE', myPeerId);
+            const expected = await peerIdFromSignPub(msg.signPublicKey);
+            if (!msg.signPublicKey || !msg.peerId || expected !== msg.peerId) {
+                ws.send(JSON.stringify({ type: 'AUTH-FAIL', error: 'peerId/clave inválidos' }));
+                try { ws.close(); } catch (e) {}
+                return;
             }
+            const nonce = randomBytes(24).toString('hex');
+            pendingAuth = { peerId: msg.peerId, signPublicKey: msg.signPublicKey, nonce };
+            ws.send(JSON.stringify({ type: 'CHALLENGE', nonce }));
+            return;
+        }
+
+        // ── Paso 2: AUTH { sig } → el cliente firmó el nonce; lo verificamos ──
+        if (msg.type === 'AUTH') {
+            if (!pendingAuth) { ws.send(JSON.stringify({ type: 'AUTH-FAIL', error: 'sin reto previo' })); return; }
+            const ok = await verifySig(pendingAuth.signPublicKey, pendingAuth.nonce, msg.sig);
+            if (!ok) {
+                ws.send(JSON.stringify({ type: 'AUTH-FAIL', error: 'firma inválida' }));
+                try { ws.close(); } catch (e) {}
+                return;
+            }
+            myPeerId = pendingAuth.peerId;
+            authed = true;
+            pendingAuth = null;
+            goOnline();
             return;
         }
 
@@ -361,6 +436,9 @@ wss.on('connection', (ws, req) => {
             ws.send(JSON.stringify({ type: 'PONG', ts: Date.now() }));
             return;
         }
+
+        // A partir de acá, TODO exige estar autenticado (nadie reenvía/recibe sin probar identidad).
+        if (!authed) { return; }
 
         // Confirmación de recepción (ACK): la reenvía al emisor para que marque ✓ y borre su outbox.
         if (msg.type === 'CHAT_ACK' && msg.to) {
@@ -461,10 +539,14 @@ function getLanAddresses() {
     return out;
 }
 
-loadDirectory();
-seedBots(); // asegurar los contactos "BBQ Test" y "Claude" siempre presentes
-seedFlows(); // flujo de agente por defecto (asistente de tienda)
+async function start() {
+    await loadDirectory();     // trae el directorio persistido (Upstash/archivo)
+    seedBots();                // contactos "BBQ Test" y "Claude" siempre presentes (en memoria)
+    seedFlows();               // flujo de agente por defecto (asistente de tienda)
+    startServer();
+}
 
+function startServer() {
 server.listen(PORT, '0.0.0.0', () => {
     const lan = getLanAddresses();
     console.log('\n\x1b[1m\x1b[32m' + '═'.repeat(60) + '\x1b[0m');
@@ -475,5 +557,9 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  🔌 Señalización: \x1b[33mws://localhost:${PORT}/ws\x1b[0m`);
     console.log(`  📇 Directorio:   \x1b[33mPOST /api/register · POST /api/contacts/match\x1b[0m`);
     console.log(`  📊 Estado:       \x1b[33mGET /api/status\x1b[0m`);
+    console.log(`  🔐 Directorio:   \x1b[33m${store.backend()}${store.backend() === 'file' ? ' (efímero en Render — configurá Upstash)' : ' (persistente)'}\x1b[0m`);
     console.log('\x1b[1m\x1b[32m' + '═'.repeat(60) + '\x1b[0m\n');
 });
+}
+
+start();

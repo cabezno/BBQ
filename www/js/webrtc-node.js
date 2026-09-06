@@ -77,16 +77,27 @@
             }
 
             this.ws.onopen = () => {
-                this.wsReady = true;
                 this._reconnectDelay = 1000;
-                this.ws.send(JSON.stringify({ type: 'HELLO', peerId: this.peerId }));
-                this._log('Señalización conectada');
+                // HELLO con la clave pública de firma → el server responde con un reto (CHALLENGE).
+                // wsReady se activa recién al autenticar (HELLO-ACK), no acá.
+                const signPublicKey = (window.BBQIdentity && window.BBQIdentity.getSignPublicKeyB64 && window.BBQIdentity.getSignPublicKeyB64()) || '';
+                this.ws.send(JSON.stringify({ type: 'HELLO', peerId: this.peerId, signPublicKey }));
+                this._log('Señalización conectada (autenticando…)');
                 this._startHeartbeat();
             };
 
             this.ws.onmessage = async (ev) => {
                 let m; try { m = JSON.parse(ev.data); } catch { return; }
-                if (m.type === 'HELLO-ACK') { this._updateConnUI('online'); this._emitReady(); return; }
+                // Reto de autenticación: firmamos el nonce con la clave del dispositivo.
+                if (m.type === 'CHALLENGE') {
+                    try {
+                        const sig = await window.BBQIdentity.sign(m.nonce);
+                        this.ws.send(JSON.stringify({ type: 'AUTH', sig }));
+                    } catch (e) { this._log('Error firmando el reto: ' + e.message); }
+                    return;
+                }
+                if (m.type === 'AUTH-FAIL') { this._log('Autenticación rechazada: ' + (m.error || '')); return; }
+                if (m.type === 'HELLO-ACK') { this.wsReady = true; this._updateConnUI('online'); this._emitReady(); return; }
                 if (m.type === 'PONG') { this._gotPong = true; return; }
                 if (m.type === 'PEER-OFFLINE') { this._emitState(m.to, 'offline'); return; }
                 if (m.type === 'PEER_ONLINE') { this._emitPresence(m.peerId, true); return; }
