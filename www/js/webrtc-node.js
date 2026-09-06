@@ -30,6 +30,16 @@
         init(peerId) {
             this.peerId = peerId;
             this._connectSignaling();
+            // Al volver a primer plano, reconectar de una si el socket murió.
+            if (!this._visHooked && typeof document !== 'undefined') {
+                this._visHooked = true;
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && (!this.ws || this.ws.readyState !== WebSocket.OPEN)) {
+                        this._reconnectDelay = 500;
+                        this._connectSignaling();
+                    }
+                });
+            }
         },
 
         onMessage(cb) { this.msgListeners.push(cb); },
@@ -58,12 +68,13 @@
                 this._reconnectDelay = 1000;
                 this.ws.send(JSON.stringify({ type: 'HELLO', peerId: this.peerId }));
                 this._log('Señalización conectada');
+                this._startHeartbeat();
             };
 
             this.ws.onmessage = async (ev) => {
                 let m; try { m = JSON.parse(ev.data); } catch { return; }
                 if (m.type === 'HELLO-ACK') { this._updateConnUI('online'); return; }
-                if (m.type === 'PONG') return;
+                if (m.type === 'PONG') { this._gotPong = true; return; }
                 if (m.type === 'PEER-OFFLINE') { this._emitState(m.to, 'offline'); return; }
                 if (m.type === 'SIGNAL') { await this._onSignal(m); return; }
                 // Chat recibido por relay WS (respaldo cuando no hay P2P).
@@ -72,10 +83,36 @@
 
             this.ws.onclose = () => {
                 this.wsReady = false;
+                this._stopHeartbeat();
                 this._updateConnUI('offline');
                 this._scheduleReconnect();
             };
             this.ws.onerror = () => { this._updateConnUI('offline'); };
+        },
+
+        // Mantiene vivo el socket (redes móviles cortan sockets ociosos) y reconecta
+        // si el socket quedó "zombie" (no vuelve el PONG).
+        _startHeartbeat() {
+            this._stopHeartbeat();
+            this._heartbeatTimer = setInterval(() => {
+                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+                this._gotPong = false;
+                try { this.ws.send(JSON.stringify({ type: 'PING' })); } catch (e) {}
+                this._pongWatch = setTimeout(() => {
+                    if (!this._gotPong) {
+                        this._log('Sin PONG → reconectando');
+                        try { this.ws && this.ws.close(); } catch (e) {}
+                        this.wsReady = false;
+                        this._stopHeartbeat();
+                        this._updateConnUI('connecting');
+                        this._connectSignaling();
+                    }
+                }, 8000);
+            }, 12000);
+        },
+        _stopHeartbeat() {
+            if (this._heartbeatTimer) { clearInterval(this._heartbeatTimer); this._heartbeatTimer = null; }
+            if (this._pongWatch) { clearTimeout(this._pongWatch); this._pongWatch = null; }
         },
 
         _scheduleReconnect() {
