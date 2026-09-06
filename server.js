@@ -43,6 +43,18 @@ app.use(express.static(path.join(__dirname, 'www'), {
    ══════════════════════════════════════════════════════════════ */
 let directory = {}; // phoneNormalized → { phone, name, peerId, publicKey, updatedAt }
 
+// ── Puente Claude (bridge): mensajes al contacto "Claude" se encolan acá; Claude
+//    (corriendo en la PC) los lee por /api/claude/inbox y responde por /api/claude/reply.
+const CLAUDE_TOKEN = process.env.CLAUDE_TOKEN || 'bbq-bridge-7k2p';
+let claudeInbox = [];
+let claudeSeq = 0;
+
+// Contactos-bot siempre presentes en el directorio (aunque se reinicie el server).
+function seedBots() {
+    directory['5491100000000'] = { phone: '5491100000000', name: 'BBQ Test (bot)', peerId: 'bbq_testbot', publicKey: 'TESTKEY', updatedAt: new Date().toISOString() };
+    directory['5491100000007'] = { phone: '5491100000007', name: '🤖 Claude (BBQ)', peerId: 'bbq_claude', publicKey: 'CLAUDEKEY', updatedAt: new Date().toISOString() };
+}
+
 function loadDirectory() {
     try {
         if (fs.existsSync(DIRECTORY_FILE)) {
@@ -198,6 +210,28 @@ app.post('/api/pay', async (req, res) => {
     });
 });
 
+// ── Puente Claude: bandeja de entrada (Claude la drena) y respuesta ──
+app.get('/api/claude/inbox', (req, res) => {
+    if (req.query.token !== CLAUDE_TOKEN) return res.status(403).json({ ok: false });
+    const messages = claudeInbox;
+    claudeInbox = [];
+    res.json({ ok: true, messages });
+});
+app.post('/api/claude/reply', (req, res) => {
+    const { token, to, text } = req.body || {};
+    if (token !== CLAUDE_TOKEN) return res.status(403).json({ ok: false });
+    const target = onlinePeers.get(to);
+    if (target && target.readyState === WebSocket.OPEN) {
+        target.send(JSON.stringify({
+            type: 'CHAT_RELAY',
+            from: 'bbq_claude',
+            payload: { type: 'chat', message: { id: 'claude_' + Date.now(), sender: 'bbq_claude', text: text || '', timestamp: new Date().toISOString() } }
+        }));
+        return res.json({ ok: true, delivered: true });
+    }
+    res.json({ ok: true, delivered: false, reason: 'peer offline' });
+});
+
 // ── Estado del servidor ──
 app.get('/api/status', (req, res) => {
     res.json({
@@ -277,6 +311,14 @@ wss.on('connection', (ws, req) => {
         // Relay de chat por WS (respaldo cuando WebRTC no conecta). Transitorio: no se guarda.
         // CHAT_RELAY { to, from, payload }  (payload = {type:'chat'|'voice'|'attachment', message, ...})
         if (msg.type === 'CHAT_RELAY' && msg.to) {
+            // Puente Claude: encolar el mensaje para que Claude (en la PC) lo lea y responda.
+            if (msg.to === 'bbq_claude') {
+                const incoming = msg.payload && msg.payload.message;
+                claudeInbox.push({ id: ++claudeSeq, from: msg.from, text: (incoming && incoming.text) || '', ts: Date.now() });
+                if (claudeInbox.length > 200) claudeInbox = claudeInbox.slice(-200);
+                console.log(`\x1b[35m[CLAUDE] mensaje de ${msg.from}: ${(incoming && incoming.text) || ''}\x1b[0m`);
+                return;
+            }
             // Bot de prueba: responde solo.
             if (msg.to === 'bbq_testbot') {
                 const incoming = msg.payload && msg.payload.message;
@@ -329,6 +371,7 @@ function getLanAddresses() {
 }
 
 loadDirectory();
+seedBots(); // asegurar los contactos "BBQ Test" y "Claude" siempre presentes
 
 server.listen(PORT, '0.0.0.0', () => {
     const lan = getLanAddresses();
