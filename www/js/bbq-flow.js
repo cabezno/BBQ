@@ -22,7 +22,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
 
     function tpl(str, ctx) {
-        return String(str == null ? '' : str).replace(/\{\{(\w+)\}\}/g, (_, k) => (ctx[k] != null ? String(ctx[k]) : ''));
+        // Soporta {{var}} y {{obj.campo.subcampo}} (rutas con punto).
+        return String(str == null ? '' : str).replace(/\{\{([\w.]+)\}\}/g, (_, path) => {
+            const val = path.split('.').reduce((o, k) => (o == null ? o : o[k]), ctx);
+            return val != null ? (typeof val === 'object' ? JSON.stringify(val) : String(val)) : '';
+        });
     }
 
     async function runFlow(flow, input, opts) {
@@ -88,24 +92,27 @@
         return null; // ok
     }
 
-    // Flujo por defecto: asistente de tienda (3 etapas acotadas).
+    // Flujo por defecto: asistente de tienda. Carga el catálogo REAL (tool) y responde
+    // con esos datos. Si el ejecutor no tiene la tool (p.ej. worker sin datos locales),
+    // {{catalogo}} queda vacío y el modelo responde de forma genérica (degrada bien).
     const DEFAULT_STORE_FLOW = {
         id: 'store-assistant',
         name: 'Asistente de tienda',
-        start: 'clasificar',
+        start: 'cargar_catalogo',
         stages: [
+            { id: 'cargar_catalogo', type: 'tool', tool: 'store.catalogText', out: 'catalogo', next: 'clasificar' },
             {
                 id: 'clasificar', type: 'classify',
                 system: 'Sos el asistente de una tienda. Clasificá la consulta del cliente en una categoría.',
                 prompt: '{{input}}',
-                options: ['saludo', 'precio', 'stock', 'envio', 'otro'],
+                options: ['saludo', 'precio', 'stock', 'envio', 'comprar', 'otro'],
                 out: 'intent',
-                routes: { saludo: 'saludar', precio: 'responder', stock: 'responder', envio: 'responder', otro: 'responder' }
+                routes: { saludo: 'saludar', precio: 'responder', stock: 'responder', envio: 'responder', comprar: 'responder', otro: 'responder' }
             },
             { id: 'saludar', type: 'reply', text: '¡Hola! Bienvenido a la tienda 🛍️ ¿Qué producto te interesa?', next: 'end' },
             {
                 id: 'responder', type: 'llm',
-                system: 'Sos el asistente de una tienda BBQ. Respondé breve y en español según la consulta (categoría: {{intent}}). Si no tenés el dato, ofrecé ayuda para conseguirlo.',
+                system: 'Sos el asistente de una tienda BBQ. Respondé breve y en español. Usá SOLO estos datos reales del catálogo:\n{{catalogo}}\nSi el cliente quiere comprar, confirmá el producto y el precio y ofrecé continuar la compra. Si no tenés el dato, decilo con honestidad.',
                 prompt: '{{input}}', out: 'respuesta', next: 'enviar'
             },
             { id: 'enviar', type: 'reply', text: '{{respuesta}}', next: 'end' },

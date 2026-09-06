@@ -51,11 +51,42 @@
         } catch (e) { return false; }
     }
 
+    // Describe una propuesta de acción sensible en texto legible para el dueño.
+    function describeProposal(p) {
+        const a = p.args || {};
+        switch (p.toolId) {
+            case 'pay.charge': return `💳 Cobrar ${money(a.amount)}${a.concept ? ' por ' + a.concept : ''} (TEST)`;
+            case 'order.create': return `🧾 Crear pedido${a.buyer ? ' de ' + a.buyer : ''} (${(a.items || []).length} ítem/s)`;
+            case 'store.upsertProduct': return `📦 Guardar producto "${a.name}"${a.price != null ? ' a ' + money(a.price) : ''}`;
+            case 'store.setPrice': return `🏷️ Cambiar precio de "${a.idOrName}" a ${money(a.price)}`;
+            case 'store.setStock': return `📊 Ajustar stock de "${a.idOrName}"`;
+            case 'escrow.hold': return `🔒 Retener pago ${money(a.price)} en escrow (TEST)`;
+            case 'escrow.confirmDelivery': return `✅ Liberar pago contra entrega (TEST)`;
+            case 'escrow.refund': return `↩️ Reembolsar pago retenido (TEST)`;
+            default: return `${p.desc || p.toolId}`;
+        }
+    }
+    function money(n) { return '$' + Number(n || 0).toLocaleString('es-AR'); }
+
+    // Gate de confirmación (v1: "confirmación siempre"). Encola la propuesta y avisa al
+    // dueño en el chat. La ejecución real ocurre al confirmar (UI en la próxima iteración).
+    function makeOnProposal(onReply) {
+        return async (proposal) => {
+            const desc = describeProposal(proposal);
+            (window.BBQAgentProposals = window.BBQAgentProposals || []).push(proposal);
+            await onReply(`🤖 El agente propone: ${desc}\n(requiere tu confirmación)`);
+            return { proposed: true, desc };
+        };
+    }
+
     async function runAgentLocally(agentId, text, onReply) {
         const flow = await getFlow('store-assistant');
         if (!flow || !window.BBQFlow) { onReply('(no se pudo cargar el flujo del agente)'); return; }
-        await window.BBQFlow.runFlow(flow, text, { runLLM: browserRunLLM, onReply });
+        const tools = (window.BBQTools)
+            ? window.BBQTools.buildToolset(window.BBQTools.PROFILES.store, { agentId, onProposal: makeOnProposal(onReply) })
+            : {};
+        await window.BBQFlow.runFlow(flow, text, { runLLM: browserRunLLM, onReply, tools, vars: { __onReply: onReply } });
     }
 
-    window.BBQFlowRunner = { browserRunLLM, getFlow, isWorkerOnline, runAgentLocally };
+    window.BBQFlowRunner = { browserRunLLM, getFlow, isWorkerOnline, runAgentLocally, describeProposal };
 })();
