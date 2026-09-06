@@ -7,8 +7,8 @@
  */
 (function () {
     const DB_NAME = 'bbq_db';
-    const DB_VERSION = 1;
-    const STORES = ['kv', 'contacts', 'chats', 'messages', 'products', 'status'];
+    const DB_VERSION = 2;
+    const STORES = ['kv', 'contacts', 'chats', 'messages', 'products', 'status', 'outbox'];
 
     let dbPromise = null;
 

@@ -98,6 +98,9 @@
                 incoming.sender = fromPeerId; // el remitente real
                 window.buyerStorage.appendChatMessage(fromPeerId, incoming);
 
+                // Confirmar recepción (ACK) para que el emisor marque ✓ y borre su outbox.
+                if (incoming.id && window.BBQNet) window.BBQNet.sendAck(fromPeerId, incoming.id);
+
                 if (typeof currentChatId !== 'undefined' && fromPeerId === currentChatId) {
                     if (typeof renderMobileMessages === 'function') renderMobileMessages();
                 }
@@ -110,6 +113,52 @@
                     CONTACTS_DATA[peerId].status = state === 'online' ? 'en línea · P2P' : 'desconectado';
                 }
             });
+
+            // Presencia: cuando un contacto se conecta, vaciar mi outbox hacia él.
+            window.BBQNet.onPresence((peerId, online) => {
+                if (typeof CONTACTS_DATA !== 'undefined' && CONTACTS_DATA[peerId]) {
+                    CONTACTS_DATA[peerId].status = online ? 'en línea' : 'desconectado';
+                    if (typeof renderMobileChatList === 'function') renderMobileChatList();
+                }
+                if (online) this.outboxFlush(peerId);
+            });
+
+            // ACK: el destinatario recibió → marcar ✓ y sacar del outbox.
+            window.BBQNet.onAck((fromPeerId, msgId) => {
+                this.outboxRemove(msgId);
+                this._markSent(fromPeerId, msgId);
+            });
+
+            // Al conectar/reconectar: intentar vaciar todo el outbox.
+            window.BBQNet.onReady(() => this.outboxFlush());
+        },
+
+        // ── Outbox durable (en el teléfono): mensajes ⏳ que esperan al destinatario ──
+        async outboxAdd(to, payload) {
+            try { await window.BBQDB.set('outbox', payload.message.id, { id: payload.message.id, to, payload, ts: Date.now() }); } catch (e) {}
+        },
+        async outboxRemove(msgId) {
+            try { await window.BBQDB.del('outbox', msgId); } catch (e) {}
+        },
+        async outboxFlush(peerId) {
+            let rows = [];
+            try { rows = await window.BBQDB.all('outbox'); } catch (e) { return; }
+            for (const r of rows) {
+                const item = r.value;
+                if (!item || (peerId && item.to !== peerId)) continue;
+                if (window.BBQNet) window.BBQNet.send(item.to, item.payload); // reintento; el ACK lo borrará
+            }
+        },
+        _markSent(peerId, msgId) {
+            try {
+                const db = window.buyerStorage.getDatabase();
+                const chat = db.chats.find(c => c.contactId === peerId);
+                if (chat) {
+                    const m = chat.messages.find(x => x.id === msgId);
+                    if (m) { m.status = 'sent'; window.buyerStorage.saveDatabase(db); }
+                }
+                if (typeof currentChatId !== 'undefined' && peerId === currentChatId && typeof renderMobileMessages === 'function') renderMobileMessages();
+            } catch (e) {}
         },
 
         // ── UI: modal para agregar/invitar contactos ──

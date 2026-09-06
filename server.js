@@ -320,6 +320,14 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const onlinePeers = new Map(); // peerId → ws
 
+// Aviso de presencia a los demás (no guarda nada; solo "quién está online").
+function broadcastPresence(type, peerId) {
+    const raw = JSON.stringify({ type, peerId });
+    onlinePeers.forEach((w, id) => {
+        if (id !== peerId && w.readyState === WebSocket.OPEN) { try { w.send(raw); } catch (e) {} }
+    });
+}
+
 wss.on('connection', (ws, req) => {
     let myPeerId = null;
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -343,12 +351,21 @@ wss.on('connection', (ws, req) => {
                     delete pendingReplies[myPeerId];
                     console.log(`\x1b[35m[CLAUDE] entregadas ${pend.length} respuestas pendientes a ${myPeerId}\x1b[0m`);
                 }
+                // Avisar a los demás que este peer se conectó (para que vacíen su outbox).
+                broadcastPresence('PEER_ONLINE', myPeerId);
             }
             return;
         }
 
         if (msg.type === 'PING') {
             ws.send(JSON.stringify({ type: 'PONG', ts: Date.now() }));
+            return;
+        }
+
+        // Confirmación de recepción (ACK): la reenvía al emisor para que marque ✓ y borre su outbox.
+        if (msg.type === 'CHAT_ACK' && msg.to) {
+            const t = onlinePeers.get(msg.to);
+            if (t && t.readyState === WebSocket.OPEN) { try { t.send(JSON.stringify(msg)); } catch (e) {} }
             return;
         }
 
@@ -418,6 +435,7 @@ wss.on('connection', (ws, req) => {
         if (myPeerId) {
             onlinePeers.delete(myPeerId);
             console.log(`\x1b[31m[WS] Offline: ${myPeerId} (${onlinePeers.size} conectados)\x1b[0m`);
+            broadcastPresence('PEER_OFFLINE', myPeerId);
         }
     });
 

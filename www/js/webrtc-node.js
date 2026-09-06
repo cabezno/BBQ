@@ -42,15 +42,28 @@
             }
         },
 
+        presenceListeners: [],
+        ackListeners: [],
+        readyListeners: [],
         onMessage(cb) { this.msgListeners.push(cb); },
         onPeerState(cb) { this.stateListeners.push(cb); },
         onMediaSignal(cb) { this.mediaSignalListeners.push(cb); },
         onCallSignal(cb) { this.callSignalListeners.push(cb); },
+        onPresence(cb) { this.presenceListeners.push(cb); },   // (peerId, online)
+        onAck(cb) { this.ackListeners.push(cb); },             // (fromPeerId, msgId)
+        onReady(cb) { this.readyListeners.push(cb); },         // (): conectado/reconectado
         // Enviar señalización arbitraria a un peer (Vivos usan data.ns='media'; llamadas data.ns='call').
         sendSignal(to, data) { this._signal(to, data); },
+        // Confirmar recepción de un mensaje al emisor.
+        sendAck(to, msgId) {
+            if (this.ws && this.wsReady) this.ws.send(JSON.stringify({ type: 'CHAT_ACK', to, from: this.peerId, id: msgId }));
+        },
 
         _emitMessage(fromPeerId, msg) { this.msgListeners.forEach(fn => fn(fromPeerId, msg)); },
         _emitState(peerId, state) { this.stateListeners.forEach(fn => fn(peerId, state)); },
+        _emitPresence(peerId, online) { this.presenceListeners.forEach(fn => fn(peerId, online)); },
+        _emitAck(fromPeerId, msgId) { this.ackListeners.forEach(fn => fn(fromPeerId, msgId)); },
+        _emitReady() { this.readyListeners.forEach(fn => { try { fn(); } catch (e) {} }); },
 
         // ── Señalización (WebSocket con el server mínimo) ──
         _connectSignaling() {
@@ -73,9 +86,12 @@
 
             this.ws.onmessage = async (ev) => {
                 let m; try { m = JSON.parse(ev.data); } catch { return; }
-                if (m.type === 'HELLO-ACK') { this._updateConnUI('online'); return; }
+                if (m.type === 'HELLO-ACK') { this._updateConnUI('online'); this._emitReady(); return; }
                 if (m.type === 'PONG') { this._gotPong = true; return; }
                 if (m.type === 'PEER-OFFLINE') { this._emitState(m.to, 'offline'); return; }
+                if (m.type === 'PEER_ONLINE') { this._emitPresence(m.peerId, true); return; }
+                if (m.type === 'PEER_OFFLINE') { this._emitPresence(m.peerId, false); return; }
+                if (m.type === 'CHAT_ACK') { this._emitAck(m.from, m.id); return; }
                 if (m.type === 'SIGNAL') { await this._onSignal(m); return; }
                 // Chat recibido por relay WS (respaldo cuando no hay P2P).
                 if (m.type === 'CHAT_RELAY' && m.payload) { this._emitMessage(m.from, m.payload); return; }

@@ -3,7 +3,7 @@
  * Cache-first strategy for static assets, network-first for API/WS
  */
 
-const CACHE_NAME = 'bbq-pwa-v28';
+const CACHE_NAME = 'bbq-pwa-v29';
 const STATIC_ASSETS = [
     '/',
     '/index.html',

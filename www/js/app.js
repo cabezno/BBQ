@@ -554,7 +554,7 @@ function renderMobileMessages() {
                     <div class="msg-footer-meta">
                         ${(m.text && !m.payloadCard) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
                         <span class="msg-timestamp">${formatTime(m.timestamp)}</span>
-                        ${isOutgoing ? '<span class="wa-tick read">✓✓</span>' : ''}
+                        ${isOutgoing ? (m.status === 'pending' ? '<span class="wa-tick" style="color:var(--wa-tick-gray);" title="Esperando que el contacto se conecte">⏳</span>' : '<span class="wa-tick read">✓✓</span>') : ''}
                     </div>
                 </div>
             </div>
@@ -679,18 +679,20 @@ function sendMessage(textOverride = null) {
     const activeContact = CONTACTS_DATA[currentChatId];
     if (activeContact && activeContact.isReal) {
         const cid = currentChatId;
+        const isAgent = typeof cid === 'string' && cid.indexOf('agent_') === 0;
         const msg = {
             id: 'm_' + Date.now(),
             sender: window.MY_PEER_ID,
             text: text,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            status: isAgent ? 'sent' : 'pending' // humano: ⏳ hasta el ACK; agente: directo
         };
         window.buyerStorage.appendChatMessage(cid, msg);
         renderMobileMessages();
         renderMobileChatList();
 
         // ¿Es un AGENTE (tienda/asistente con flujo)? → routing worker/móvil.
-        if (typeof cid === 'string' && cid.indexOf('agent_') === 0 && window.BBQFlowRunner) {
+        if (isAgent && window.BBQFlowRunner) {
             window.BBQFlowRunner.isWorkerOnline(cid).then(online => {
                 if (online && window.BBQNet) {
                     // El worker de PC atiende y responde.
@@ -710,12 +712,11 @@ function sendMessage(textOverride = null) {
             return;
         }
 
-        // Contacto humano normal.
-        if (window.BBQNet) {
-            window.BBQNet.send(cid, { type: 'chat', message: msg }).then(r => {
-                if (!r.ok && window.bbqToast) window.bbqToast('⚠️ No entregado (contacto offline)');
-            });
-        }
+        // Contacto humano: guardar en el OUTBOX del teléfono (durable) y entregar.
+        // Queda ⏳ pendiente hasta que el otro se conecta y confirma (ACK) → ✓.
+        const payload = { type: 'chat', message: msg };
+        if (window.BBQ && window.BBQ.outboxAdd) window.BBQ.outboxAdd(cid, payload);
+        if (window.BBQNet) window.BBQNet.send(cid, payload);
         hideAttachPopup();
         return;
     }
