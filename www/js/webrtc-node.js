@@ -66,6 +66,8 @@
                 if (m.type === 'PONG') return;
                 if (m.type === 'PEER-OFFLINE') { this._emitState(m.to, 'offline'); return; }
                 if (m.type === 'SIGNAL') { await this._onSignal(m); return; }
+                // Chat recibido por relay WS (respaldo cuando no hay P2P).
+                if (m.type === 'CHAT_RELAY' && m.payload) { this._emitMessage(m.from, m.payload); return; }
             };
 
             this.ws.onclose = () => {
@@ -171,20 +173,18 @@
 
         // ── Enviar un objeto JSON a un peer (lo conecta si hace falta) ──
         async send(peerId, obj) {
-            let entry = this.peers.get(peerId);
-            if (!entry || !entry.ready) {
-                await this.connect(peerId);
-                // Esperar a que abra el canal (hasta ~8s)
-                const ok = await this._waitReady(peerId, 8000);
-                if (!ok) return { ok: false, error: 'Peer no disponible (offline)' };
-                entry = this.peers.get(peerId);
+            // 1) Si ya hay canal P2P directo, mandarlo por ahí.
+            const entry = this.peers.get(peerId);
+            if (entry && entry.ready && entry.channel) {
+                try { entry.channel.send(JSON.stringify(obj)); return { ok: true, via: 'p2p' }; } catch (e) {}
             }
-            try {
-                entry.channel.send(JSON.stringify(obj));
-                return { ok: true };
-            } catch (e) {
-                return { ok: false, error: e.message };
+            // 2) Si no, mandar YA por relay WS (instantáneo) y abrir P2P en segundo plano.
+            this.connect(peerId).catch(() => {});
+            if (this.ws && this.wsReady) {
+                this.ws.send(JSON.stringify({ type: 'CHAT_RELAY', to: peerId, from: this.peerId, payload: obj }));
+                return { ok: true, via: 'relay' };
             }
+            return { ok: false, error: 'Sin conexión' };
         },
 
         _waitReady(peerId, timeoutMs) {

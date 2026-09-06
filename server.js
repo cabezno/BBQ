@@ -209,6 +209,16 @@ app.get('/api/status', (req, res) => {
     });
 });
 
+// Bot de prueba (contacto "BBQ Test"): respuestas simples para verificar el chat.
+function botReply(text) {
+    const t = (text || '').toLowerCase().trim();
+    if (!t) return '🤖 ¡Hola! Soy el BBQ Asistente (bot de prueba). Escribime algo.';
+    if (t.includes('hola') || t.includes('buenas')) return '🤖 ¡Hola! Soy el bot de prueba de BBQ. El chat funciona ✅ ¿Qué querés probar?';
+    if (t.includes('precio') || t.includes('cuánto') || t.includes('cuanto') || t.includes('stock')) return '🤖 Soy un bot de prueba (sin catálogo real), pero tu mensaje llegó perfecto 👍';
+    if (t.includes('gracias') || t.includes('chau')) return '🤖 ¡De nada! Chat andando 🎉';
+    return '🤖 Recibí: "' + text + '" — el chat funciona correctamente.';
+}
+
 /* ══════════════════════════════════════════════════════════════
    SEÑALIZACIÓN WebRTC (transitoria, no guarda mensajes)
    ══════════════════════════════════════════════════════════════ */
@@ -261,6 +271,30 @@ wss.on('connection', (ws, req) => {
                 peerId: msg.peerId,
                 online: onlinePeers.has(msg.peerId)
             }));
+            return;
+        }
+
+        // Relay de chat por WS (respaldo cuando WebRTC no conecta). Transitorio: no se guarda.
+        // CHAT_RELAY { to, from, payload }  (payload = {type:'chat'|'voice'|'attachment', message, ...})
+        if (msg.type === 'CHAT_RELAY' && msg.to) {
+            // Bot de prueba: responde solo.
+            if (msg.to === 'bbq_testbot') {
+                const incoming = msg.payload && msg.payload.message;
+                const userText = (incoming && incoming.text) || '';
+                const reply = botReply(userText);
+                ws.send(JSON.stringify({
+                    type: 'CHAT_RELAY',
+                    from: 'bbq_testbot',
+                    payload: { type: 'chat', message: { id: 'bot_' + Date.now(), sender: 'bbq_testbot', text: reply, timestamp: new Date().toISOString() } }
+                }));
+                return;
+            }
+            const target = onlinePeers.get(msg.to);
+            if (target && target.readyState === WebSocket.OPEN) {
+                target.send(JSON.stringify({ type: 'CHAT_RELAY', from: msg.from, payload: msg.payload }));
+            } else {
+                ws.send(JSON.stringify({ type: 'PEER-OFFLINE', to: msg.to }));
+            }
             return;
         }
     });
