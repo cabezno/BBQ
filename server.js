@@ -127,10 +127,12 @@ function normalizePhone(raw) {
 }
 
 // ── Registro / actualización de identidad (FIRMADO) ──
-// Body: { phone, name, peerId, signPublicKey, ecdhPublicKey, ts, sig }
+// Body: { phone, name, peerId, signPublicKey, ecdhPublicKey, ecdhSig, ts, sig }
 // El cliente firma `${peerId}|${telefonoNormalizado}|${ts}` con su clave privada.
+// ecdhSig = firma de `bbq-ecdh-v1|${peerId}|${ecdhPublicKey}`: ata la clave de cifrado a la
+// identidad, así los clientes la verifican solos y el server no puede cambiarla.
 app.post('/api/register', async (req, res) => {
-    const { phone, name, peerId, signPublicKey, ecdhPublicKey, ts, sig } = req.body || {};
+    const { phone, name, peerId, signPublicKey, ecdhPublicKey, ecdhSig, ts, sig } = req.body || {};
     const key = normalizePhone(phone);
     if (!key || key.length < 6) {
         return res.status(400).json({ ok: false, error: 'Teléfono inválido' });
@@ -152,6 +154,10 @@ app.post('/api/register', async (req, res) => {
     if (!ok) {
         return res.status(403).json({ ok: false, error: 'Firma inválida' });
     }
+    // 3b) Si viene la firma de la clave de cifrado, tiene que ser válida.
+    if (ecdhSig && !(await verifySig(signPublicKey, `bbq-ecdh-v1|${peerId}|${ecdhPublicKey || ''}`, ecdhSig))) {
+        return res.status(403).json({ ok: false, error: 'Firma de clave de cifrado inválida' });
+    }
     // 4) El número es solo una etiqueta: primero que llega lo toma; otra identidad no lo pisa.
     if (directory[key] && directory[key].peerId && directory[key].peerId !== peerId) {
         return res.status(409).json({ ok: false, error: 'Ese número ya está tomado por otra identidad' });
@@ -163,6 +169,7 @@ app.post('/api/register', async (req, res) => {
         signPublicKey: signPublicKey.toString().slice(0, 512),
         publicKey: (ecdhPublicKey || '').toString().slice(0, 2048), // ECDH para E2E (compat con campo previo)
         ecdhPublicKey: (ecdhPublicKey || '').toString().slice(0, 2048),
+        ecdhSig: (ecdhSig || '').toString().slice(0, 512),
         updatedAt: new Date().toISOString()
     };
     persistUser(key);
@@ -179,7 +186,7 @@ app.post('/api/contacts/match', (req, res) => {
         const key = normalizePhone(p);
         if (key && directory[key]) {
             const u = directory[key];
-            matches.push({ phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey });
+            matches.push({ phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey, ecdhSig: u.ecdhSig });
         }
     }
     res.json({ ok: true, matches });
@@ -190,7 +197,7 @@ app.get('/api/user/:phone', (req, res) => {
     const key = normalizePhone(req.params.phone);
     const u = directory[key];
     if (!u) return res.status(404).json({ ok: false, error: 'No encontrado' });
-    res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey } });
+    res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey, ecdhSig: u.ecdhSig } });
 });
 
 // ── Proxy de IA (evita CORS de los proveedores; la API key la manda el cliente) ──

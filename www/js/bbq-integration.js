@@ -32,10 +32,28 @@
         async loadRealContacts() {
             const list = await window.BBQContacts.list();
             for (const c of list) this._mergeContact(c);
+            // Contactos agregados antes del E2E: traer sus claves firmadas del directorio
+            // (solo si el número sigue siendo de la MISMA identidad).
+            for (const c of list) {
+                if (c.ecdhSig || !c.phone) continue;
+                fetch(`${window.BBQ_SERVER}/api/user/${encodeURIComponent(c.phone)}`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(async d => {
+                        const u = d && d.user;
+                        if (!u || u.peerId !== c.peerId || !u.ecdhSig) return;
+                        Object.assign(c, { publicKey: u.publicKey, signPublicKey: u.signPublicKey, ecdhSig: u.ecdhSig });
+                        await window.BBQContacts.save(c);
+                        this._mergeContact(c);
+                    }).catch(() => {});
+            }
         },
 
         _mergeContact(c) {
             if (!c || !c.peerId) return;
+            // Claves de cifrado del contacto: se guardan solo si verifican contra su peerId.
+            if (window.BBQE2E && c.signPublicKey && c.publicKey && c.ecdhSig) {
+                window.BBQE2E.learn(c.peerId, c.signPublicKey, c.publicKey, c.ecdhSig).catch(() => {});
+            }
             // CONTACTS_DATA es global (definido en app.js). Lo mutamos (no reasignamos).
             if (typeof CONTACTS_DATA !== 'undefined') {
                 CONTACTS_DATA[c.peerId] = {
@@ -97,6 +115,7 @@
 
                 const incoming = msg.message;
                 incoming.sender = fromPeerId; // el remitente real
+                incoming.e2e = msg._e2e === true; // lo decide el receptor (descifró o no), no el emisor
                 window.buyerStorage.appendChatMessage(fromPeerId, incoming);
 
                 // Confirmar recepción (ACK) para que el emisor marque ✓ y borre su outbox.

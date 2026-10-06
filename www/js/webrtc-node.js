@@ -59,7 +59,21 @@
             if (this.ws && this.wsReady) this.ws.send(JSON.stringify({ type: 'CHAT_ACK', to, from: this.peerId, id: msgId }));
         },
 
-        _emitMessage(fromPeerId, msg) { this.msgListeners.forEach(fn => fn(fromPeerId, msg)); },
+        // Entrada única de payloads (P2P o relay): descifra los sobres E2E. Si ya tengo las claves
+        // verificadas de ese peer, NO acepto nada en claro (nadie en el medio puede inyectar texto).
+        async _emitMessage(fromPeerId, msg) {
+            const E = window.BBQE2E;
+            if (msg && msg.type === 'e2e') {
+                const plain = E ? await E.decrypt(fromPeerId, msg) : null;
+                if (!plain || typeof plain !== 'object') { this._log('Sobre E2E inválido de ' + fromPeerId); return; }
+                plain._e2e = true;
+                msg = plain;
+            } else if (E && await E.canEncrypt(fromPeerId)) {
+                this._log('Descartado mensaje en claro de ' + fromPeerId + ' (se esperaba cifrado)');
+                return;
+            }
+            this.msgListeners.forEach(fn => fn(fromPeerId, msg));
+        },
         _emitState(peerId, state) { this.stateListeners.forEach(fn => fn(peerId, state)); },
         _emitPresence(peerId, online) { this.presenceListeners.forEach(fn => fn(peerId, online)); },
         _emitAck(fromPeerId, msgId) { this.ackListeners.forEach(fn => fn(fromPeerId, msgId)); },
@@ -252,16 +266,22 @@
 
         // ── Enviar un objeto JSON a un peer (lo conecta si hace falta) ──
         async send(peerId, obj) {
+            // 0) Cifrar E2E si tengo las claves verificadas del destinatario (bots/agentes: en claro).
+            let wire = obj;
+            if (window.BBQE2E) {
+                try { wire = (await window.BBQE2E.encrypt(peerId, obj)) || obj; }
+                catch (e) { this._log('No se pudo cifrar para ' + peerId + ': ' + e.message); return { ok: false, error: 'Error de cifrado' }; }
+            }
             // 1) Si ya hay canal P2P directo, mandarlo por ahí.
             const entry = this.peers.get(peerId);
             if (entry && entry.ready && entry.channel) {
-                try { entry.channel.send(JSON.stringify(obj)); return { ok: true, via: 'p2p' }; } catch (e) {}
+                try { entry.channel.send(JSON.stringify(wire)); return { ok: true, via: 'p2p', e2e: wire !== obj }; } catch (e) {}
             }
             // 2) Si no, mandar YA por relay WS (instantáneo) y abrir P2P en segundo plano.
             this.connect(peerId).catch(() => {});
             if (this.ws && this.wsReady) {
-                this.ws.send(JSON.stringify({ type: 'CHAT_RELAY', to: peerId, from: this.peerId, payload: obj }));
-                return { ok: true, via: 'relay' };
+                this.ws.send(JSON.stringify({ type: 'CHAT_RELAY', to: peerId, from: this.peerId, payload: wire }));
+                return { ok: true, via: 'relay', e2e: wire !== obj };
             }
             return { ok: false, error: 'Sin conexión' };
         },

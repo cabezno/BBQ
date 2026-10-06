@@ -536,7 +536,9 @@ function renderMobileMessages() {
     if (messages.length === 0) {
         html += `
             <div style="text-align:center; margin:15px 0; color:var(--wa-text-secondary); font-size:0.78rem;">
-                🔒 Chat P2P cifrado directamente entre terminales móviles.
+                ${(window.BBQE2E && window.BBQE2E.knows(currentChatId))
+                    ? '🔒 Cifrado de extremo a extremo: ni el servidor puede leer estos mensajes.'
+                    : '⚠️ Este chat no está cifrado de extremo a extremo (bot, agente o contacto sin claves).'}
             </div>
         `;
     }
@@ -553,6 +555,7 @@ function renderMobileMessages() {
                     ${m.payloadCard ? renderPayloadCard(m.payloadCard) : ''}
                     <div class="msg-footer-meta">
                         ${(m.text && !m.payloadCard) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
+                        ${(!isOutgoing && m.e2e) ? '<span title="Cifrado de extremo a extremo" style="font-size:0.65rem;">🔒</span>' : ''}
                         <span class="msg-timestamp">${formatTime(m.timestamp)}</span>
                         ${isOutgoing ? (m.status === 'pending' ? '<span class="wa-tick" style="color:var(--wa-tick-gray);" title="Esperando que el contacto se conecte">⏳</span>' : '<span class="wa-tick read">✓✓</span>') : ''}
                     </div>
