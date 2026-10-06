@@ -87,6 +87,8 @@ class LocalStorageEngine {
             chat = { contactId, messages: [] };
             db.chats.push(chat);
         }
+        // Un reenvío del outbox (o un ACK perdido) no debe duplicar el mensaje.
+        if (message && message.id && chat.messages.some(m => m.id === message.id)) return;
         chat.messages.push(message);
         this.saveDatabase(db);
     }

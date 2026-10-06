@@ -365,7 +365,8 @@ function botReply(text) {
    SEÑALIZACIÓN WebRTC (transitoria, no guarda mensajes)
    ══════════════════════════════════════════════════════════════ */
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+// maxPayload: un adjunto por relay entra holgado; un frame de 100 MB (default de ws) no.
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 * 1024 });
 
 const onlinePeers = new Map(); // peerId → ws
 
@@ -514,7 +515,8 @@ wss.on('connection', (ws, req) => {
     });
 
     ws.on('close', () => {
-        if (myPeerId) {
+        // Si el mismo peer ya se reconectó con otro socket, este cierre viejo no lo pone offline.
+        if (myPeerId && onlinePeers.get(myPeerId) === ws) {
             onlinePeers.delete(myPeerId);
             console.log(`\x1b[31m[WS] Offline: ${myPeerId} (${onlinePeers.size} conectados)\x1b[0m`);
             broadcastPresence('PEER_OFFLINE', myPeerId);
@@ -523,9 +525,14 @@ wss.on('connection', (ws, req) => {
 
     ws.on('error', (err) => console.error('[WS] Error:', err.message));
 
+    // Heartbeat: si no contestó el ping anterior, la conexión está muerta (típico en móvil).
+    let alive = true;
+    ws.on('pong', () => { alive = true; });
     const ping = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) ws.ping();
-        else clearInterval(ping);
+        if (ws.readyState !== WebSocket.OPEN) { clearInterval(ping); return; }
+        if (!alive) { clearInterval(ping); try { ws.terminate(); } catch (e) {} return; }
+        alive = false;
+        ws.ping();
     }, 30000);
 });
 

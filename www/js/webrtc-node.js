@@ -66,33 +66,48 @@
         _emitReady() { this.readyListeners.forEach(fn => { try { fn(); } catch (e) {} }); },
 
         // ── Señalización (WebSocket con el server mínimo) ──
-        _connectSignaling() {
+        // Un solo socket vivo a la vez: si ya hay uno abierto/conectando, no abre otro
+        // (salvo `force`, cuando el actual quedó zombie). Los eventos de sockets viejos se ignoran.
+        _connectSignaling(force) {
+            if (!force && this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+            if (this._reconnectTimer) { clearTimeout(this._reconnectTimer); this._reconnectTimer = null; }
+            const old = this.ws;
+            if (old) {
+                old.onopen = old.onmessage = old.onclose = old.onerror = null;
+                try { old.close(); } catch (e) {}
+            }
+            this.wsReady = false;
+
             const base = window.BBQ_SERVER || location.origin;
             const wsUrl = base.replace(/^http/, 'ws') + '/ws';
+            let ws;
             try {
-                this.ws = new WebSocket(wsUrl);
+                ws = new WebSocket(wsUrl);
             } catch (e) {
+                this.ws = null;
                 this._scheduleReconnect();
                 return;
             }
+            this.ws = ws;
 
-            this.ws.onopen = () => {
+            ws.onopen = () => {
                 this._reconnectDelay = 1000;
                 // HELLO con la clave pública de firma → el server responde con un reto (CHALLENGE).
                 // wsReady se activa recién al autenticar (HELLO-ACK), no acá.
                 const signPublicKey = (window.BBQIdentity && window.BBQIdentity.getSignPublicKeyB64 && window.BBQIdentity.getSignPublicKeyB64()) || '';
-                this.ws.send(JSON.stringify({ type: 'HELLO', peerId: this.peerId, signPublicKey }));
+                ws.send(JSON.stringify({ type: 'HELLO', peerId: this.peerId, signPublicKey }));
                 this._log('Señalización conectada (autenticando…)');
                 this._startHeartbeat();
             };
 
-            this.ws.onmessage = async (ev) => {
+            ws.onmessage = async (ev) => {
+                if (this.ws !== ws) return;
                 let m; try { m = JSON.parse(ev.data); } catch { return; }
                 // Reto de autenticación: firmamos el nonce con la clave del dispositivo.
                 if (m.type === 'CHALLENGE') {
                     try {
                         const sig = await window.BBQIdentity.sign(m.nonce);
-                        this.ws.send(JSON.stringify({ type: 'AUTH', sig }));
+                        if (this.ws === ws) ws.send(JSON.stringify({ type: 'AUTH', sig }));
                     } catch (e) { this._log('Error firmando el reto: ' + e.message); }
                     return;
                 }
@@ -108,13 +123,14 @@
                 if (m.type === 'CHAT_RELAY' && m.payload) { this._emitMessage(m.from, m.payload); return; }
             };
 
-            this.ws.onclose = () => {
+            ws.onclose = () => {
+                if (this.ws !== ws) return;
                 this.wsReady = false;
                 this._stopHeartbeat();
                 this._updateConnUI('offline');
                 this._scheduleReconnect();
             };
-            this.ws.onerror = () => { this._updateConnUI('offline'); };
+            ws.onerror = () => { if (this.ws === ws) this._updateConnUI('offline'); };
         },
 
         // Mantiene vivo el socket (redes móviles cortan sockets ociosos) y reconecta
@@ -128,11 +144,9 @@
                 this._pongWatch = setTimeout(() => {
                     if (!this._gotPong) {
                         this._log('Sin PONG → reconectando');
-                        try { this.ws && this.ws.close(); } catch (e) {}
-                        this.wsReady = false;
                         this._stopHeartbeat();
                         this._updateConnUI('connecting');
-                        this._connectSignaling();
+                        this._connectSignaling(true);
                     }
                 }, 8000);
             }, 12000);
@@ -144,7 +158,8 @@
 
         _scheduleReconnect() {
             this._updateConnUI('connecting');
-            setTimeout(() => this._connectSignaling(), this._reconnectDelay);
+            if (this._reconnectTimer) return;
+            this._reconnectTimer = setTimeout(() => { this._reconnectTimer = null; this._connectSignaling(); }, this._reconnectDelay);
             this._reconnectDelay = Math.min(this._reconnectDelay * 1.5, 20000);
         },
 

@@ -3,7 +3,7 @@
  * Cache-first strategy for static assets, network-first for API/WS
  */
 
-const CACHE_NAME = 'bbq-pwa-v32';
+const CACHE_NAME = 'bbq-pwa-v33';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -123,7 +123,7 @@ self.addEventListener('fetch', (event) => {
                 })
                 .catch(() => {
                     // Offline: serve from cache
-                    return caches.match(event.request) || caches.match('/index.html');
+                    return caches.match(event.request).then(r => r || caches.match('/index.html'));
                 })
         );
         return;
