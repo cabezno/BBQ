@@ -9,8 +9,9 @@
 ## ✨ Cómo funciona
 
 - **Identidad atada al dispositivo** — una clave criptográfica **no exportable** se genera en tu teléfono. El número de teléfono es solo una etiqueta para que te encuentren.
-- **Servidor mínimo** — guarda únicamente `{ teléfono, nombre, peerId, clave pública }` y hace de **señalización transitoria** WebRTC. No almacena mensajes.
-- **Mensajería P2P** — chat directo teléfono↔teléfono por WebRTC (cifrado DTLS). Entrega cuando ambos están en línea.
+- **Servidor mínimo** — guarda `{ teléfono, nombre, peerId, claves públicas firmadas }` y hace de **señalización transitoria** WebRTC. Si el P2P no conecta, reenvía (relay) los mensajes **cifrados** sin guardarlos.
+- **Mensajería P2P cifrada de extremo a extremo** — chat teléfono↔teléfono por WebRTC; cada mensaje entre personas va además cifrado E2E (ECDH + AES-GCM), así que ni el server puede leerlo, vaya por P2P o por relay. Los chats con bots/agentes todavía no van cifrados (la app lo avisa).
+- **Agente de tienda** — responde a los clientes con el catálogo real. Usa la IA que elijas (API propia, on-device o tu PC); **sin IA** sigue respondiendo por palabras clave.
 - **Contactos** — agregás por número (o desde tu agenda en la app nativa) y ves quién ya tiene BBQ; a los que no, los invitás por WhatsApp/SMS.
 - **Comercio** — IA local, Escrow con QR, Google Pay (sandbox), logística, automatizaciones, referidos y Vivos.
 
@@ -63,6 +64,9 @@ Para leer la agenda del teléfono y push, se compila con **Capacitor**. Ver [`CA
         ├── contacts.js           # Contactos + match + invitar
         ├── onboarding.js         # Alta primera vez
         ├── bbq-integration.js    # Integración con la UI
+        ├── e2e.js                # Cifrado de extremo a extremo (ECDH → HKDF → AES-GCM)
+        ├── sanitize.js           # Escapado de datos ajenos antes de pintarlos (anti-XSS)
+        ├── bbq-flow.js · bbq-flow-runner.js · bbq-tools.js   # Motor de flujos de agentes
         ├── storage-engine.js     # Historial local
         ├── ai-orchestrator.js · escrow-engine.js · google-pay-engine.js
         ├── logistics-engine.js · automation-engine.js · referral-engine.js
@@ -76,6 +80,10 @@ Para leer la agenda del teléfono y push, se compila con **Capacitor**. Ver [`CA
 - Web: HTML/CSS/JS vanilla, WebRTC, IndexedDB, Web Crypto, Service Worker (PWA)
 - Servidor: Node + Express + WebSocket (`ws`)
 - Nativo: Capacitor (Android/iOS) + plugins Contacts/Share/Push
+
+## 📜 Cambios
+
+Ver [`docs/CAMBIOS.md`](docs/CAMBIOS.md): qué se cambió, cómo se probó y qué falta.
 
 ## 📄 Licencia
 

@@ -127,3 +127,15 @@ más perfiles (Secretario, Productor), topes pre-aprobados.
 - **2026-09-06:** Primer agente = **Tienda (comercio completo)**.
 - **2026-09-06:** Acciones sensibles = **confirmación humana siempre**.
 - **2026-09-06:** Alcance v1 = **atención real + dinero TEST** (no se pausa por el dinero real).
+
+---
+
+## Modo sin IA
+
+Si no hay IA disponible (sin API key, sin saldo, sin modelo on-device y sin worker de PC), el flujo **no se corta**:
+
+- `browserRunLLM` devuelve `null`.
+- Las etapas `classify` eligen por **palabras clave** (`KEYWORDS` en `bbq-flow.js`, o `keywords` propias de la etapa). "Saludo" solo gana si no hay otra intención; sin coincidencias, se elige `otro`.
+- Las etapas `llm` usan su texto `fallback` (plantilla). El flujo por defecto responde con el catálogo real (`{{catalogo}}`).
+- Si una etapa `llm` no tiene `fallback`, se usa `noAiText` ("el dueño te contesta a la brevedad").
+

@@ -10,6 +10,8 @@
  * si está OFFLINE → el teléfono corre el flujo localmente. Misma definición, distinto ejecutor.
  */
 (function () {
+    // Devuelve el texto del modelo, o null si no hay IA (sin key, sin saldo o sin on-device).
+    // Con null el flujo responde igual: clasifica por palabras clave y usa sus textos de respaldo.
     async function browserRunLLM(system, user, opts) {
         const cfg = (window.merchantStorage && window.merchantStorage.getAiConfig && window.merchantStorage.getAiConfig()) || {};
         const providerMap = { gemini_api: 'gemini', openai_api: 'openai', claude_api: 'anthropic', deepseek_api: 'deepseek', ollama_local: 'ollama' };
@@ -31,7 +33,7 @@
             try { return await window.WorkflowAI.run(system, user, opts); } catch (e) {}
         }
         // 3) sin IA
-        return 'No hay IA disponible en el teléfono. Configurá una API key en Ajustes de IA, o encendé el worker de PC del agente.';
+        return null;
     }
 
     async function getFlow(flowId) {
@@ -85,7 +87,8 @@
         const tools = (window.BBQTools)
             ? window.BBQTools.buildToolset(window.BBQTools.PROFILES.store, { agentId, onProposal: makeOnProposal(onReply) })
             : {};
-        await window.BBQFlow.runFlow(flow, text, { runLLM: browserRunLLM, onReply, tools, vars: { __onReply: onReply } });
+        await window.BBQFlow.runFlow(flow, text, { runLLM: browserRunLLM, onReply, tools, vars: { __onReply: onReply },
+            noAiText: 'Gracias por tu mensaje 🙌 El dueño de la tienda te contesta a la brevedad.' });
     }
 
     window.BBQFlowRunner = { browserRunLLM, getFlow, isWorkerOnline, runAgentLocally, describeProposal };
