@@ -57,7 +57,7 @@
                 if (msg && (msg.type === 'live_start' || msg.type === 'live_end')) {
                     window.LIVE_HOSTS = window.LIVE_HOSTS || {};
                     const info = msg.message || {};
-                    const hostId = info.hostId || fromPeerId;
+                    const hostId = safeId(info.hostId || fromPeerId);
                     if (msg.type === 'live_start') {
                         const name = info.hostName || (typeof CONTACTS_DATA !== 'undefined' && CONTACTS_DATA[hostId] && CONTACTS_DATA[hostId].name) || 'Contacto';
                         window.LIVE_HOSTS[hostId] = { hostName: name, product: info.product };
@@ -79,6 +79,7 @@
                 }
 
                 // Nota de voz entrante: decodificar el audio (base64) y guardarlo en IndexedDB.
+                if (msg.message.payloadCard) msg.message.payloadCard.id = safeId(msg.message.payloadCard.id);
                 if (msg.type === 'voice' && msg.audio && msg.message.payloadCard) {
                     try {
                         const blob = await (await fetch(msg.audio)).blob();
@@ -124,7 +125,11 @@
             });
 
             // ACK: el destinatario recibió → marcar ✓ y sacar del outbox.
-            window.BBQNet.onAck((fromPeerId, msgId) => {
+            // Solo vale el ACK del destinatario de ESE mensaje (otro peer no puede borrarlo).
+            window.BBQNet.onAck(async (fromPeerId, msgId) => {
+                let row = null;
+                try { row = await window.BBQDB.get('outbox', msgId); } catch (e) {}
+                if (row && row.to !== fromPeerId) return;
                 this.outboxRemove(msgId);
                 this._markSent(fromPeerId, msgId);
             });
@@ -220,7 +225,7 @@
                 this._mergeContact(r.contact);
                 if (typeof renderMobileChatList === 'function') renderMobileChatList();
                 result.style.color = '#22c55e';
-                result.innerHTML = `✅ ${r.contact.name} agregado. <a href="#" id="bbqOpenChat" style="color:#f59e0b;">Abrir chat</a>`;
+                result.innerHTML = `✅ ${escHtml(r.contact.name)} agregado. <a href="#" id="bbqOpenChat" style="color:#f59e0b;">Abrir chat</a>`;
                 document.getElementById('bbqOpenChat').onclick = (e) => {
                     e.preventDefault();
                     document.getElementById('bbqAddContactModal').style.display = 'none';

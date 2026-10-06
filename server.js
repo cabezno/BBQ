@@ -404,6 +404,7 @@ wss.on('connection', (ws, req) => {
 
         // ── Paso 1: HELLO { peerId, signPublicKey } → el server manda un reto ──
         if (msg.type === 'HELLO') {
+            if (authed) return; // la identidad de un socket no cambia una vez probada
             const expected = await peerIdFromSignPub(msg.signPublicKey);
             if (!msg.signPublicKey || !msg.peerId || expected !== msg.peerId) {
                 ws.send(JSON.stringify({ type: 'AUTH-FAIL', error: 'peerId/clave inválidos' }));
@@ -439,6 +440,9 @@ wss.on('connection', (ws, req) => {
 
         // A partir de acá, TODO exige estar autenticado (nadie reenvía/recibe sin probar identidad).
         if (!authed) { return; }
+
+        // El remitente es SIEMPRE la identidad probada de este socket: nunca el `from` que manda el cliente.
+        msg.from = myPeerId;
 
         // Confirmación de recepción (ACK): la reenvía al emisor para que marque ✓ y borre su outbox.
         if (msg.type === 'CHAT_ACK' && msg.to) {

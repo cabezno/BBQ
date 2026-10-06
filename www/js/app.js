@@ -135,8 +135,8 @@ function showInAppNotification(payload) {
     const notif = document.createElement('div');
     notif.className = 'in-app-notification';
     notif.innerHTML = `
-        <div style="font-weight:700; font-size:0.85rem;">${name}</div>
-        <div style="font-size:0.78rem; opacity:0.8;">${text.substring(0, 50)}</div>
+        <div style="font-weight:700; font-size:0.85rem;">${escHtml(name)}</div>
+        <div style="font-size:0.78rem; opacity:0.8;">${escHtml(String(text).substring(0, 50))}</div>
     `;
     notif.onclick = () => {
         selectMobileChat(payload.senderId);
@@ -493,20 +493,20 @@ function renderMobileChatList() {
         const lastMsg = messages.length > 0 ? messages[messages.length - 1] : { text: 'Iniciar chat P2P cifrado', timestamp: Date.now() };
 
         return `
-            <div class="m-chat-item" onclick="selectMobileChat('${id}')">
+            <div class="m-chat-item" onclick="selectMobileChat('${safeId(id)}')">
                 <div class="m-avatar">
                     ${c.avatar}
                     <div class="online-dot"></div>
                 </div>
                 <div class="m-chat-details">
                     <div class="m-chat-top">
-                        <div class="m-chat-name">${c.name}</div>
+                        <div class="m-chat-name">${escHtml(c.name)}</div>
                         <div class="m-chat-time">${formatTime(lastMsg.timestamp)}</div>
                     </div>
                     <div class="m-chat-bottom">
                         <div class="m-last-msg">
                             <span class="wa-tick read">✓✓</span>
-                            <span>${truncateText(lastMsg.text, 30)}</span>
+                            <span>${escHtml(truncateText(lastMsg.text, 30))}</span>
                         </div>
                         ${id === 'p2p_store_techzone' ? '<div class="m-unread-pill">1</div>' : ''}
                     </div>
@@ -549,7 +549,7 @@ function renderMobileMessages() {
             <div class="wa-msg-row ${isOutgoing ? 'outgoing' : 'incoming'} ${isAi ? 'ai-msg' : ''}">
                 <div class="wa-msg-bubble">
                     ${isAi ? '<div class="msg-author-tag">⚡ IA Local Tienda</div>' : ''}
-                    <div>${m.text}</div>
+                    <div>${escHtml(m.text)}</div>
                     ${m.payloadCard ? renderPayloadCard(m.payloadCard) : ''}
                     <div class="msg-footer-meta">
                         ${(m.text && !m.payloadCard) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
@@ -566,14 +566,28 @@ function renderMobileMessages() {
     hydrateAttachments(); // cargar imágenes/archivos desde IndexedDB
 }
 
-function renderPayloadCard(card) {
+// Literal JS seguro para meter dentro de un atributo onclick="...".
+function jsArg(v) { return escHtml(JSON.stringify(String(v == null ? '' : v))); }
+
+function renderPayloadCard(rawCard) {
+    // La tarjeta puede venir de otro peer: normalizar tipos y escapar antes de pintar.
+    const num = (v) => { const n = Number(v); return isFinite(n) ? n : 0; };
+    const card = Object.assign({}, rawCard, {
+        id: safeId(rawCard.id),
+        total: num(rawCard.total),
+        productPrice: num(rawCard.productPrice),
+        shippingFee: num(rawCard.shippingFee),
+        deliveryMode: rawCard.deliveryMode === 'PICKUP' ? 'PICKUP' : 'COURIER',
+        concept: String(rawCard.concept == null ? '' : rawCard.concept)
+    });
     if (card.type === 'image') {
         return `<img data-att="${card.id}" style="max-width:220px; max-height:280px; border-radius:10px; margin-top:6px; cursor:pointer; display:block; background:#0000001a;" onclick="openImageAttachment('${card.id}')">`;
     }
     if (card.type === 'file') {
         const kb = card.size ? Math.max(1, Math.round(card.size / 1024)) : '';
-        const safeName = (card.name || 'Documento').replace(/'/g, '').replace(/"/g, '');
-        return `<div data-att="${card.id}" onclick="downloadAttachment('${card.id}','${safeName}')" style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.25); border:1px solid var(--wa-border); border-radius:10px; padding:10px; margin-top:6px; cursor:pointer;">
+        const fileName = String(card.name || 'Documento');
+        const safeName = escHtml(fileName);
+        return `<div data-att="${card.id}" onclick="downloadAttachment('${card.id}',${jsArg(fileName)})" style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.25); border:1px solid var(--wa-border); border-radius:10px; padding:10px; margin-top:6px; cursor:pointer;">
             <i class="bi bi-file-earmark-arrow-down" style="font-size:1.6rem; color:var(--wa-green);"></i>
             <div><div style="font-size:0.82rem; font-weight:600;">${safeName}</div><div style="font-size:0.7rem; color:var(--wa-text-secondary);">${kb} KB · Tocar para descargar</div></div>
         </div>`;
@@ -607,13 +621,13 @@ function renderPayloadCard(card) {
                         ${isPaid ? 'Google Pay OK' : 'Pendiente Pago'}
                     </span>
                 </div>
-                <div style="font-size:0.85rem; font-weight:bold; color:var(--wa-text-primary); margin-bottom:2px;">${card.concept}</div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--wa-text-primary); margin-bottom:2px;">${escHtml(card.concept)}</div>
                 <div style="font-size:0.95rem; font-weight:900; color:#38bdf8; margin-bottom:4px;">$${card.total.toFixed(2)} USD</div>
                 <div style="font-size:0.7rem; color:var(--wa-text-secondary); margin-bottom:8px;">
                     ${isPickup ? '🏪 Retiro en Local ($0 Envío)' : '🚚 Envío Courier (+$' + card.shippingFee.toFixed(2) + ')'}
                 </div>
                 ${!isPaid ? `
-                    <button class="btn-wa-primary" style="width:100%; font-size:0.8rem; padding:8px; display:flex; align-items:center; justify-content:center; gap:6px; background:#ffffff; color:#0f172a; border:none; font-weight:900;" onclick="handlePayMerchantInvoice('${card.id}', ${card.total}, '${card.concept.replace(/'/g, "\\'")}', '${card.deliveryMode}')">
+                    <button class="btn-wa-primary" style="width:100%; font-size:0.8rem; padding:8px; display:flex; align-items:center; justify-content:center; gap:6px; background:#ffffff; color:#0f172a; border:none; font-weight:900;" onclick="handlePayMerchantInvoice('${card.id}', ${card.total}, ${jsArg(card.concept)}, '${card.deliveryMode}')">
                         <span style="font-weight:900; background:linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:0.95rem;">GPay</span>
                         <span>Pagar $${card.total.toFixed(2)} USD</span>
                     </button>
@@ -641,7 +655,7 @@ function renderPayloadCard(card) {
                         <div class="voice-wave-bar" style="height:70%;"></div>
                     </div>
                     <div style="font-size:0.72rem; color:var(--wa-text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                        <span>🎤 Nota de voz (${card.durationStr || '00:04'})</span>
+                        <span>🎤 Nota de voz (${escHtml(card.durationStr || '00:04')})</span>
                         <button onclick="transcribeVoiceNote('${card.id}')" title="Transcribir" style="background:none; border:none; color:var(--wa-green); cursor:pointer; font-size:0.72rem; padding:0 4px;">📝</button>
                     </div>
                     <div id="vnText_${card.id}" style="font-size:0.75rem; color:var(--wa-text-primary); margin-top:4px;"></div>
@@ -1835,11 +1849,11 @@ function initInstagramStoriesBar() {
         const h = liveHosts[hostId];
         const nombre = (h.hostName || 'En vivo').split(' ')[0];
         html += `
-            <div class="story-item-bubble" onclick="openLiveViewer('${hostId}')">
+            <div class="story-item-bubble" onclick="openLiveViewer('${safeId(hostId)}')">
                 <div class="story-avatar-container story-ring-live">
                     <div class="story-avatar-img">📹</div>
                 </div>
-                <span class="story-label font-inter-black text-danger">🔴 ${nombre}</span>
+                <span class="story-label font-inter-black text-danger">🔴 ${escHtml(nombre)}</span>
             </div>
         `;
     });
@@ -2316,11 +2330,11 @@ function renderContactPicker(mode = 'chat') {
                 <div style="display:flex; gap:10px; align-items:center;">
                     <div style="font-size:1.6rem;">${c.avatar}</div>
                     <div>
-                        <div class="font-inter-black" style="font-size:0.9rem;">${c.name}</div>
-                        <div class="font-inter-light" style="font-size:0.72rem; color:var(--wa-text-secondary);">${c.status}</div>
+                        <div class="font-inter-black" style="font-size:0.9rem;">${escHtml(c.name)}</div>
+                        <div class="font-inter-light" style="font-size:0.72rem; color:var(--wa-text-secondary);">${escHtml(c.status)}</div>
                     </div>
                 </div>
-                <button class="btn-wa-primary" style="padding:5px 12px; font-size:0.75rem;" onclick="handleContactPickerSelect('${id}', '${mode}')">
+                <button class="btn-wa-primary" style="padding:5px 12px; font-size:0.75rem;" onclick="handleContactPickerSelect('${safeId(id)}', '${mode}')">
                     ${mode === 'chat' ? '💬 Chat' : '📞 Llamar'}
                 </button>
             </div>
