@@ -4,6 +4,23 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Decisión: disputas entre las partes, BBQ se deslinda
+
+**Qué cambió (solo docs)**
+- `MODELO-NEGOCIO.md`: nueva sección con la decisión del dueño. Las disputas las resuelven comprador y vendedor, y los dos tienen que poner un respaldo para litigar. BBQ solo abre el canal de comunicación y se deslinda de compras, ventas e interacciones entre usuarios.
+- Se anotan tres tensiones con el estudio:
+  - BBQ Pagos decide capturar o cancelar;
+  - el envío vendido en nombre propio;
+  - la Ley 17.250.
+- `MODELO-PAGOS-Y-ENTREGAS.md`: la decisión se suma a la pregunta 3 para el abogado.
+- `CLAUDE.md`: se suma a la idea del proyecto.
+
+**Pendiente**
+- Definir qué es el "respaldo": depósito, identidad verificada, pruebas o una combinación.
+- Diseñar la liberación del cobro por reglas fijas: QR, acuerdo de las dos partes o vencimiento.
+
+---
+
 ## 2026-10-07 — Estudio de modelo de negocio y figura jurídica en el repo
 
 **Qué cambió**

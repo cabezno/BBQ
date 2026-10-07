@@ -381,7 +381,7 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 1. Para replicar el esquema PedidosYa (marketplace + empresa de pagos), ¿qué requisitos, costos,
    plazos y obligaciones de prevención de lavado tiene la inscripción como PSPC (Libro IX)?
 2. ¿Hay diferencia regulatoria entre ser intermediario (esquema PedidosYa) y comisionista?
-3. Términos y condiciones: responsabilidad ante el consumidor, reclamos, contracargos.
+3. Términos y condiciones: responsabilidad ante el consumidor, reclamos, contracargos. **Decisión del 2026-10-07:** las disputas son entre comprador y vendedor, los dos ponen un respaldo para litigar, y BBQ se deslinda y solo abre el canal. ¿Cuánto se puede deslindar bajo la Ley 17.250? ¿Es compatible con que BBQ venda el envío en nombre propio?
 4. Ley 20.396: diferencia entre tercerizar con cadeterías/empresas de logística y contratar cadetes
    individuales vía la app.
 5. Si negocios y cadetes ven un "saldo cobrado" en la app antes de la transferencia, ¿cuenta como

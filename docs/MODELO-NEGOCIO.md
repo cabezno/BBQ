@@ -34,6 +34,23 @@
   - **Variante A:** SAS más una cooperativa de cadetes.
   - **Variante B:** toda BBQ como cooperativa.
 
+## Decisión del dueño (2026-10-07): disputas y responsabilidad
+
+> "Las disputas las resuelven entre vendedor y comprador. Las tiendas tienen que respaldar, al igual que el comprador, para poder litigar. BBQ se deslinda de todas las responsabilidades de las compras, ventas o interacciones entre los usuarios: solo abre el canal de comunicación."
+
+- **Quién decide:** comprador y vendedor. BBQ no arbitra ni define quién tiene razón.
+- **Respaldo de las dos partes:** para litigar, tanto la tienda como el comprador tienen que poner un respaldo. Queda por definir qué es:
+  - un depósito o garantía;
+  - identidad verificada;
+  - pruebas;
+  - o una combinación.
+- **Rol de BBQ:** canal de comunicación (y, si hay dinero real, la herramienta que retiene). No es parte de la operación.
+
+**Tensiones con el estudio, a revisar con abogado:**
+- **Control del cobro:** en el esquema PedidosYa, BBQ Pagos decide capturar o cancelar. Ante un reclamo, esa decisión resuelve la disputa en los hechos, aunque nadie la llame arbitraje. Para ser coherente, el cobro tendría que liberarse por reglas fijas (QR escaneado, acuerdo de las dos partes o vencimiento) y no por criterio de BBQ.
+- **Responsabilidad por el envío:** el estudio propone que BBQ venda el envío en nombre propio y responda por la entrega. Eso choca con deslindarse.
+- **Defensa del consumidor:** la ley de relaciones de consumo (Ley 17.250) puede alcanzar al intermediario aunque los términos digan lo contrario. Hasta dónde se puede deslindar es una pregunta para el abogado.
+
 ## Decisiones abiertas
 
 | Tema | Opciones | Lo que dice el estudio |
@@ -77,7 +94,7 @@ Nada de esto toca dinero.
 
 ### Lo que el estudio no cubre
 - **Reseñas y reputación.** El diseño previsto es que solo reseñe quien pasó por un escrow real, con la reseña firmada por el comprador; encaja con el QR de entrega.
-- **Resolución de disputas.** El estudio solo dice "reclamo → se frena el cobro → resolución".
+- **Resolución de disputas.** El estudio solo dice "reclamo → se frena el cobro → resolución". Ya está decidido: entre las partes, con respaldo de ambas (ver arriba).
 - **Protección de datos (Ley 18.331) y P2P.**
   - BBQ Pagos va a necesitar datos del pedido en el servidor (monto, partes, estado, prueba de entrega), cuando hoy los pedidos viven solo en los teléfonos.
   - Un reclamo puede necesitar pruebas, y el chat es E2E, así que el servidor no las ve. Una opción es que el comprador las aporte voluntariamente.
