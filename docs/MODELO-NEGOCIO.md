@@ -2,6 +2,14 @@
 
 > **Estado:** pendiente. Hay un estudio hecho sobre el modelo de negocio y la figura jurídica, pero todavía no está en el repo (posiblemente esté en la PC del dueño del proyecto). Cuando aparezca, va en este archivo y se alinea con lo que ya está construido.
 
+## Lo que ya se decidió (sesión del 5 al 8 de septiembre de 2026)
+
+- **Pasarela de pago:** se habló de Mercado Pago (opción para Argentina y LatAm, con soporte de retención), Stripe (con captura manual) u otra. El dueño eligió **"Solo Google Pay en TEST por ahora"**.
+- **Alcance de los agentes:** v1 es "atención real + dinero TEST". **v2 es dinero real**, con escrow real (hash, QR y validación de verdad) y una pasarela real. Es un hito propio, independiente de los agentes.
+- **Dónde buscar el estudio:**
+  - En la PC hay una carpeta `D:/Desktop/SOFTWARE/legal_drafts/` que nunca se abrió. Puede ser ahí.
+  - Documento visual de la app (definición completa, ~60 funciones con su estado): https://claude.ai/code/artifact/907712e6-4685-45ef-aa53-e4c1299e9a35
+
 ## Qué ya funciona y no depende del modelo
 
 - **Directorio de tiendas y servicios de entrega:** cada dueño publica una ficha firmada (`/api/stores`). Publicar es gratis.
