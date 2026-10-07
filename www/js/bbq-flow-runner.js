@@ -75,8 +75,9 @@
     function makeOnProposal(onReply) {
         return async (proposal) => {
             const desc = describeProposal(proposal);
-            (window.BBQAgentProposals = window.BBQAgentProposals || []).push(proposal);
-            await onReply(`🤖 El agente propone: ${desc}\n(requiere tu confirmación)`);
+            if (window.BBQProposals) await window.BBQProposals.add(proposal);  // bandeja "El agente propone"
+            else (window.BBQAgentProposals = window.BBQAgentProposals || []).push(proposal);
+            await onReply(`🤖 El agente propone: ${desc}\n(el dueño lo confirma desde Yo → El agente propone)`);
             return { proposed: true, desc };
         };
     }

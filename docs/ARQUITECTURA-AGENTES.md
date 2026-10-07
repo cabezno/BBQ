@@ -139,3 +139,18 @@ Si no hay IA disponible (sin API key, sin saldo, sin modelo on-device y sin work
 - Las etapas `llm` usan su texto `fallback` (plantilla). El flujo por defecto responde con el catálogo real (`{{catalogo}}`).
 - Si una etapa `llm` no tiene `fallback`, se usa `noAiText` ("el dueño te contesta a la brevedad").
 
+---
+
+## Operativa de tienda para agentes (2026-10)
+
+Tools nuevas en `BBQTools` (registradas por `orders.js` y `loyalty.js`):
+
+| Tool | Permiso | Sensible | Qué hace |
+|---|---|---|---|
+| `order.create` | commerce | sí | Crea un pedido, lo guarda y le avisa al comprador por chat cifrado |
+| `order.list` | store.read | no | Lista los pedidos con su estado |
+| `order.setStatus` | commerce | sí | Cambia el estado de un pedido y le avisa al comprador |
+| `loyalty.giveStamp` | commerce | sí | Entrega un sello de fidelidad firmado |
+
+Las tools sensibles no se ejecutan solas. Quedan en la **bandeja "El agente propone"** (`BBQProposals`, en IndexedDB) y el dueño las confirma o rechaza desde Yo. Al confirmar, se ejecutan con `BBQTools.runDirect`.
+

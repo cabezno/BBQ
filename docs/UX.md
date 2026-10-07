@@ -91,3 +91,14 @@ Decisiones del dueño del proyecto:
 **Fidelización, compatible con el P2P (sin base central):**
 - **Clientes:** tarjeta de sellos o puntos por tienda, firmados por la tienda y guardados en el teléfono del cliente. Se pueden verificar sin servidor. Más cupones y beneficios por recompra.
 - **Tiendas y entregas:** reputación con reseñas firmadas por compradores que pasaron por un escrow real (no se pueden inventar), insignias por cumplimiento y tiempos de respuesta. Los beneficios concretos dependen del modelo de negocio.
+
+### Estado de la dirección acordada
+
+- [x] Sin mockup, 5 pestañas, Yo, referidos en Configuración, pantallas vacías y marcas de ejemplo (tanda 1)
+- [x] Seguridad visible: onboarding, 🔒 en el chat, Centro de privacidad y código de seguridad con verificación
+- [x] Directorio real de tiendas y servicios de entrega, con fichas firmadas
+- [x] Operativa de tiendas: pedidos con estados y aviso al cliente; bandeja "El agente propone"
+- [x] Fidelización de clientes: sellos firmados, Mis tarjetas y pedido de canje
+- [ ] Fidelización de tiendas, reseñas de compras reales y dinero real: dependen de `docs/MODELO-NEGOCIO.md`
+- [ ] Código de seguridad por QR (cámara)
+

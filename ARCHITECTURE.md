@@ -42,6 +42,7 @@ App de mensajería y comercio P2P estilo WhatsApp, **app nativa** (Android + iPh
 - `POST /api/contacts/match` — le paso mi agenda, me devuelve quiénes tienen BBQ
 - `GET /api/user/:phone` — lookup individual
 - `GET /api/status` — estado
+- `POST /api/stores` · `POST /api/stores/unpublish` · `GET /api/stores?kind=store|delivery` — directorio de tiendas y servicios de entrega. Las fichas van firmadas por su dueño y los clientes las verifican.
 - `WS /ws` — señalización: `HELLO`, `SIGNAL {to, from, data}`, `IS-ONLINE`, `PING`
 - Persistencia: `directory.json` (solo teléfono + nombre + peerId + publicKey)
 
@@ -51,6 +52,10 @@ App de mensajería y comercio P2P estilo WhatsApp, **app nativa** (Android + iPh
 - `js/contacts.js` *(nuevo)* — leer agenda, match, invitar
 - `js/p2p-node.js` — transporte WebRTC (DataChannel) + señalización
 - `js/e2e.js` — cifrado de extremo a extremo de los mensajes entre personas (ver abajo)
+- `js/listings.js` — publicar y leer fichas firmadas del directorio de tiendas y entregas
+- `js/orders.js` — pedidos con estados (aviso al cliente por chat cifrado) y bandeja "El agente propone"
+- `js/loyalty.js` — fidelización: sellos firmados por la tienda y guardados por el cliente
+- `js/ux.js`, `js/ux-commerce.js` — pestaña Yo, Centro de privacidad, código de seguridad y pantallas de comercio
 - Motores existentes: `ai-orchestrator`, `escrow-engine`, `google-pay-engine`, `logistics-engine`, `automation-engine`, `referral-engine`, `p2p-live-engine`, `app.js`
 
 ### Capacitor

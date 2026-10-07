@@ -1886,3 +1886,41 @@ body.mobile-body {
 .bbq-priv-stats b { color:var(--wa-text-primary); font-size:1rem; }
 .ws-connection-pill { display:inline-flex; align-items:center; line-height:1.2; }
 .badge-similar-store { white-space:nowrap; }
+
+/* ── Comercio: directorio real, pedidos, fidelidad, código de seguridad ── */
+.bbq-section-title { font-size:0.72rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--wa-text-secondary); margin:6px 2px 8px; }
+.bbq-verified-pill { color:#22c55e; font-size:1.1rem; align-self:flex-start; }
+.bbq-btn-secondary { border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); border-radius:999px; padding:10px 14px; min-height:44px; font:600 0.85rem Inter,system-ui,sans-serif; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.bbq-label { display:block; font-size:0.78rem; font-weight:700; color:var(--wa-text-secondary); margin:10px 2px 4px; }
+.bbq-input { width:100%; box-sizing:border-box; padding:12px; min-height:44px; border-radius:10px; border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); font:0.95rem Inter,system-ui,sans-serif; outline:none; }
+.bbq-input:focus { border-color:var(--wa-green); }
+.bbq-zone-row { display:flex; gap:6px; margin-bottom:6px; }
+.bbq-toggle { display:flex; align-items:center; gap:10px; font-weight:600; margin:4px 2px 6px; min-height:44px; }
+.bbq-toggle input { width:20px; height:20px; accent-color:var(--wa-green); }
+.bbq-placeholder { font-size:0.78rem; line-height:1.45; color:var(--wa-text-secondary); border:1px dashed var(--wa-border); border-radius:10px; padding:10px 12px; }
+.bbq-me-count { background:var(--wa-green); color:#0b141a; font-size:0.7rem; font-weight:800; border-radius:999px; padding:2px 8px; margin-right:6px; }
+
+.bbq-stamp-card { background:linear-gradient(135deg, rgba(245,158,11,0.14), rgba(249,115,22,0.08)); border:1px solid rgba(245,158,11,0.4); border-radius:12px; padding:10px 12px; margin-top:6px; }
+.bbq-stamp-card.invalid { border-color:#ef4444; background:rgba(239,68,68,0.08); }
+.bbq-stamp-head { display:flex; justify-content:space-between; gap:8px; font-weight:800; font-size:0.86rem; margin-bottom:8px; }
+.bbq-stamp-dots { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+.bbq-stamp-dot { width:16px; height:16px; border-radius:50%; border:2px solid rgba(245,158,11,0.6); }
+.bbq-stamp-dot.on { background:var(--wa-green); border-color:var(--wa-green); }
+.bbq-stamp-reward { font-size:0.78rem; color:var(--wa-text-secondary); }
+
+.bbq-order-card { background:rgba(0,0,0,0.18); border:1px solid var(--wa-border); border-radius:12px; padding:10px 12px; margin-top:6px; }
+.bbq-order-head { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:800; font-size:0.86rem; margin-bottom:4px; }
+.bbq-order-status { font-size:0.68rem; font-weight:800; border-radius:999px; padding:3px 8px; background:rgba(134,150,160,0.18); white-space:nowrap; }
+.bbq-order-status.s-entregado { background:rgba(34,197,94,0.18); color:#22c55e; }
+.bbq-order-status.s-cancelado { background:rgba(239,68,68,0.15); color:#ef4444; }
+.bbq-order-status.s-enviado, .bbq-order-status.s-preparando, .bbq-order-status.s-confirmado { background:rgba(245,158,11,0.18); color:var(--wa-green); }
+.bbq-order-items { font-size:0.8rem; color:var(--wa-text-secondary); margin-bottom:4px; }
+.bbq-order-total { font-size:0.8rem; font-weight:700; }
+.bbq-order-steps { display:flex; gap:4px; margin-top:8px; }
+.bbq-order-steps span { flex:1; height:4px; border-radius:2px; background:var(--wa-border-light); }
+.bbq-order-steps span.on { background:var(--wa-green); }
+
+.bbq-safety-number { font:700 1.25rem/1.7 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:0.08em; text-align:center; background:var(--wa-dark-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:14px; word-spacing:0.4em; }
+/* Cabecera del chat: nombre y estado en una línea cada uno (nombres largos no se pisan) */
+.m-contact-details { min-width:0; flex:1; overflow:hidden; }
+.m-contact-name, .m-contact-status { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

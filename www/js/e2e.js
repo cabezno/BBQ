@@ -106,7 +106,7 @@
             const iv = crypto.getRandomValues(new Uint8Array(12));
             const ct = await crypto.subtle.encrypt(
                 { name: 'AES-GCM', iv, additionalData: enc.encode(`bbq-e2e-v1|${p.peerId}|${peerId}`) },
-                key, enc.encode(JSON.stringify(obj)));
+                key, enc.encode(JSON.stringify({ p: obj, sn: (p.name || '').slice(0, 60) })));
             return {
                 type: 'e2e', v: 1,
                 spk: p.signPublicKeyB64, epk: p.ecdhPublicKeyB64, ksig: await me.getEcdhSig(),
@@ -124,9 +124,40 @@
                 const pt = await crypto.subtle.decrypt(
                     { name: 'AES-GCM', iv: b64ToBuf(env.iv), additionalData: enc.encode(`bbq-e2e-v1|${fromPeerId}|${me.peerId}`) },
                     key, b64ToBuf(env.ct));
-                return JSON.parse(dec.decode(pt));
+                const inner = JSON.parse(dec.decode(pt));
+                // Formato v1 con nombre del emisor adentro (cifrado: el server no lo ve).
+                if (inner && inner.p && typeof inner.p === 'object') {
+                    if (typeof inner.sn === 'string') inner.p._senderName = inner.sn.slice(0, 60);
+                    return inner.p;
+                }
+                return inner;
             } catch (e) { return null; }
         }
+    };
+
+    // ── Código de seguridad (verificación en persona) ──
+    // 60 dígitos derivados de las DOS claves de identidad (mismo resultado en ambos teléfonos).
+    // Si coinciden al compararlos cara a cara, nadie está en el medio.
+    E2E.safetyNumber = async function (peerId) {
+        const rec = await this._get(peerId);
+        const me = await window.BBQIdentity.ensure();
+        if (!rec) return null;
+        const keys = [me.signPublicKeyB64, rec.spk].sort().join('|');
+        const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('bbq-safety-v1|' + keys)));
+        let digits = '';
+        for (let i = 0; i < 30; i++) digits += String(((h[i] << 8) | h[(i + 1) % 32]) % 100).padStart(2, '0');
+        return digits.match(/.{5}/g).join(' ');
+    };
+    // Verificado = marqué como igual el código con ESTA clave. Si el contacto cambia de clave, deja de estarlo.
+    E2E.isVerified = async function (peerId) {
+        const rec = await this._get(peerId);
+        if (!rec) return false;
+        try { return (await window.BBQDB.kvGet('e2e_verified_' + peerId)) === rec.spk; } catch (e) { return false; }
+    };
+    E2E.setVerified = async function (peerId, yes) {
+        const rec = await this._get(peerId);
+        if (!rec) return;
+        try { await window.BBQDB.kvSet('e2e_verified_' + peerId, yes ? rec.spk : null); } catch (e) {}
     };
 
     window.BBQE2E = E2E;

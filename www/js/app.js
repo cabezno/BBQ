@@ -639,6 +639,24 @@ function renderPayloadCard(rawCard) {
                 `}
             </div>
         `;
+    } else if (card.type === 'stamp') {
+        // Sello de fidelidad firmado por la tienda (verificado al recibir; ver loyalty.js).
+        const n = Math.max(0, Number(card.n) || 0), need = Math.max(1, Number(card.needed) || 1);
+        const dots = Array.from({ length: Math.min(need, 20) }, (_, i) => `<span class="bbq-stamp-dot ${i < n ? 'on' : ''}"></span>`).join('');
+        return `<div class="bbq-stamp-card ${card.invalid ? 'invalid' : ''}">
+            <div class="bbq-stamp-head">🎟️ ${escHtml(card.storeName || 'Tienda')} <span>${n}/${need}</span></div>
+            <div class="bbq-stamp-dots">${dots}</div>
+            <div class="bbq-stamp-reward">${card.invalid ? '⚠️ Sello no válido (firma incorrecta)' : (n >= need ? '🎁 ' : 'Premio: ') + escHtml(card.reward || '')}</div>
+        </div>`;
+    } else if (card.type === 'order_update') {
+        const st = String(card.status || '');
+        const label = (window.BBQOrders && window.BBQOrders.LABEL[st]) || escHtml(st);
+        const items = Array.isArray(card.items) ? card.items.slice(0, 6).map(it => `${escHtml(it.qty)}× ${escHtml(it.name)}`).join(' · ') : '';
+        return `<div class="bbq-order-card">
+            <div class="bbq-order-head">🧾 Pedido ${escHtml(String(card.id || '').slice(-6))} <span class="bbq-order-status s-${escHtml(st)}">${label}</span></div>
+            <div class="bbq-order-items">${items}</div>
+            <div class="bbq-order-total">Total: $${card.total.toFixed(2)} · ${escHtml(card.storeName || '')}</div>
+        </div>`;
     } else if (card.type === 'voice_note') {
         return `
             <div class="voice-note-bubble-card">

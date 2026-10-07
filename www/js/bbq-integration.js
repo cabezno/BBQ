@@ -92,7 +92,12 @@
                 // Asegurar que el remitente exista como contacto
                 if (typeof CONTACTS_DATA !== 'undefined' && !CONTACTS_DATA[fromPeerId]) {
                     let known = await window.BBQContacts.get(fromPeerId);
-                    if (!known) known = { peerId: fromPeerId, name: 'Nuevo contacto BBQ' };
+                    // El nombre viene dentro del sobre cifrado (lo elige el emisor; se escapa al pintar).
+                    if (!known) {
+                        known = { peerId: fromPeerId, name: (typeof msg._senderName === 'string' && msg._senderName.trim()) || 'Nuevo contacto BBQ' };
+                        // Solo se guarda (sobrevive a recargar) si vino cifrado: así hay una identidad verificada detrás.
+                        if (msg._e2e) { try { await window.BBQContacts.save(known); } catch (e) {} }
+                    }
                     this._mergeContact(known);
                 }
 
@@ -116,6 +121,15 @@
                 const incoming = msg.message;
                 incoming.sender = fromPeerId; // el remitente real
                 incoming.e2e = msg._e2e === true; // lo decide el receptor (descifró o no), no el emisor
+                // Tarjetas con efecto en el teléfono (antes de guardar): sellos de fidelidad (verificados) y estado de pedidos.
+                const pc = incoming.payloadCard;
+                if (pc && pc.type === 'stamp' && window.BBQLoyalty) {
+                    const ok = await window.BBQLoyalty.receive(fromPeerId, pc, incoming.e2e);
+                    if (!ok) pc.invalid = true;
+                }
+                if (pc && pc.type === 'order_update' && incoming.e2e && window.BBQOrders) {
+                    await window.BBQOrders.receiveUpdate(fromPeerId, pc);
+                }
                 window.buyerStorage.appendChatMessage(fromPeerId, incoming);
 
                 // Confirmar recepción (ACK) para que el emisor marque ✓ y borre su outbox.

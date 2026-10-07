@@ -103,6 +103,11 @@ function seedBots() {
     directory['5491100000007'] = { phone: '5491100000007', name: '🤖 Claude (BBQ)', peerId: 'bbq_claude', publicKey: 'CLAUDEKEY', updatedAt: new Date().toISOString() };
 }
 
+async function loadListings() {
+    try { listings = await listingsStore.loadAll(); console.log(`\x1b[36m[STORES] Fichas cargadas: ${Object.keys(listings).length}\x1b[0m`); }
+    catch (e) { console.error('[STORES] Error cargando:', e.message); listings = {}; }
+}
+
 async function loadDirectory() {
     try {
         directory = await store.loadAll();
@@ -198,6 +203,66 @@ app.get('/api/user/:phone', (req, res) => {
     const u = directory[key];
     if (!u) return res.status(404).json({ ok: false, error: 'No encontrado' });
     res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey, ecdhSig: u.ecdhSig } });
+});
+
+// ── Directorio de TIENDAS y SERVICIOS DE ENTREGA (publicados por sus dueños) ──
+// Cada ficha va FIRMADA con la clave de identidad del dueño: el server la verifica y la guarda
+// tal cual (string), así cualquier cliente puede re-verificarla sin confiar en el server.
+// Firma: `bbq-listing-v1|${peerId}|${kind}|${ts}|${listingJson}`. Una ficha por dueño y tipo.
+const listingsStore = store.ns('stores');
+let listings = {}; // `${kind}:${peerId}` → { kind, peerId, signPublicKey, listingJson, ts, sig, updatedAt }
+const LISTING_KINDS = ['store', 'delivery'];
+const LISTING_MAX = 32 * 1024;
+
+function validListing(kind, l) {
+    if (!l || typeof l !== 'object') return 'Ficha inválida';
+    if (typeof l.name !== 'string' || !l.name.trim() || l.name.length > 60) return 'Nombre inválido';
+    for (const k of ['category', 'region', 'description', 'icon', 'hours']) {
+        if (l[k] != null && (typeof l[k] !== 'string' || l[k].length > 300)) return `Campo ${k} inválido`;
+    }
+    if (l.products != null && (!Array.isArray(l.products) || l.products.length > 100)) return 'Productos inválidos';
+    if (l.zones != null && (!Array.isArray(l.zones) || l.zones.length > 30)) return 'Zonas inválidas';
+    if (kind === 'delivery' && !(Array.isArray(l.zones) && l.zones.length)) return 'Un servicio de entrega necesita al menos una zona';
+    return null;
+}
+
+app.post('/api/stores', async (req, res) => {
+    const { kind, peerId, signPublicKey, listingJson, ts, sig } = req.body || {};
+    if (!LISTING_KINDS.includes(kind)) return res.status(400).json({ ok: false, error: 'Tipo inválido' });
+    if (typeof listingJson !== 'string' || listingJson.length > LISTING_MAX) return res.status(400).json({ ok: false, error: 'Ficha demasiado grande' });
+    if (!Number.isFinite(Number(ts)) || Math.abs(Date.now() - Number(ts)) > 120000) return res.status(400).json({ ok: false, error: 'Publicación caducada' });
+    if (!signPublicKey || !sig || (await peerIdFromSignPub(signPublicKey)) !== peerId) return res.status(403).json({ ok: false, error: 'Identidad inválida' });
+    if (!(await verifySig(signPublicKey, `bbq-listing-v1|${peerId}|${kind}|${ts}|${listingJson}`, sig))) return res.status(403).json({ ok: false, error: 'Firma inválida' });
+    let listing; try { listing = JSON.parse(listingJson); } catch (e) { return res.status(400).json({ ok: false, error: 'JSON inválido' }); }
+    const err = validListing(kind, listing);
+    if (err) return res.status(400).json({ ok: false, error: err });
+    const key = `${kind}:${peerId}`;
+    listings[key] = { kind, peerId, signPublicKey, listingJson, ts: Number(ts), sig, updatedAt: new Date().toISOString() };
+    listingsStore.put(key, listings[key]).catch(e => console.error('[STORES] Error persistiendo:', e.message));
+    console.log(`\x1b[32m[STORES] Publicada ${kind}: ${listing.name}\x1b[0m`);
+    res.json({ ok: true });
+});
+
+// Despublicar: firma `bbq-unlist-v1|${peerId}|${kind}|${ts}`.
+app.post('/api/stores/unpublish', async (req, res) => {
+    const { kind, peerId, signPublicKey, ts, sig } = req.body || {};
+    const key = `${kind}:${peerId}`;
+    if (!listings[key]) return res.json({ ok: true });
+    if (!Number.isFinite(Number(ts)) || Math.abs(Date.now() - Number(ts)) > 120000) return res.status(400).json({ ok: false, error: 'Pedido caducado' });
+    if (listings[key].signPublicKey !== signPublicKey || !(await verifySig(signPublicKey, `bbq-unlist-v1|${peerId}|${kind}|${ts}`, sig))) {
+        return res.status(403).json({ ok: false, error: 'Firma inválida' });
+    }
+    delete listings[key];
+    listingsStore.del(key).catch(() => {});
+    res.json({ ok: true });
+});
+
+// Listado: GET /api/stores?kind=store|delivery  (más recientes primero; el filtrado fino lo hace el cliente)
+app.get('/api/stores', (req, res) => {
+    const kind = LISTING_KINDS.includes(req.query.kind) ? req.query.kind : 'store';
+    const out = Object.values(listings).filter(l => l.kind === kind)
+        .sort((a, b) => b.ts - a.ts).slice(0, 300);
+    res.json({ ok: true, listings: out });
 });
 
 // ── Proxy de IA (evita CORS de los proveedores; la API key la manda el cliente) ──
@@ -559,6 +624,7 @@ function getLanAddresses() {
 
 async function start() {
     await loadDirectory();     // trae el directorio persistido (Upstash/archivo)
+    await loadListings();      // fichas de tiendas y servicios de entrega
     seedBots();                // contactos "BBQ Test" y "Claude" siempre presentes (en memoria)
     seedFlows();               // flujo de agente por defecto (asistente de tienda)
     startServer();

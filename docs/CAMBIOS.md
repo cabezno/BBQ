@@ -4,6 +4,59 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Comercio, tanda 2: directorio real, pedidos, agente, fidelidad y código de seguridad
+
+**Qué cambió**
+- **Directorio real de tiendas y servicios de entrega:**
+  - Server: `POST /api/stores`, `POST /api/stores/unpublish` y `GET /api/stores?kind=store|delivery`.
+  - Cada ficha va **firmada** por su dueño (`bbq-listing-v1|peerId|kind|ts|json`). El server la verifica y la guarda tal cual, y el cliente la vuelve a verificar antes de mostrarla (`www/js/listings.js`). Nadie, ni el server, puede inventar o modificar una tienda.
+  - La ficha incluye la clave de cifrado firmada del dueño, así que "Chatear" queda cifrado desde el primer mensaje.
+  - `store.js` tiene espacios separados (`Store.ns('stores')` → `bbq:stores` / `stores.json`), sin mezclarse con la guía telefónica.
+  - En Tiendas y Entregas, lo real aparece arriba ("En BBQ", con ✔ de firma) y los ejemplos abajo.
+  - En Yo están "Publicar en el directorio" y "Mi servicio de entrega" (zonas, precio y demora).
+- **Pedidos (`www/js/orders.js`):**
+  - Estados nuevo → confirmado → preparando → enviado → entregado (o cancelado).
+  - Se guardan en el teléfono del dueño. Cada cambio llega al cliente por chat cifrado como tarjeta, y el cliente lo ve en **Yo → Mis pedidos** con su progreso.
+  - Se crean desde Yo → Pedidos o desde el chat (📎 → Crear pedido).
+- **Bandeja "El agente propone":** las acciones sensibles del agente quedan guardadas y el dueño las confirma o rechaza con un toque. Al confirmar, se ejecutan con `BBQTools.runDirect`.
+- **Herramientas nuevas para agentes:**
+  - `order.create`: ahora guarda el pedido y avisa al cliente.
+  - `order.list`.
+  - `order.setStatus` (sensible).
+  - `loyalty.giveStamp` (sensible).
+- **Fidelización (`www/js/loyalty.js`):**
+  - La tienda configura sellos necesarios y premio, y da sellos desde el chat (📎 → Dar sello).
+  - Cada sello va **firmado por la tienda**. El cliente lo verifica (tiene que llegar cifrado y con la firma de esa tienda) y lo guarda en **Yo → Mis tarjetas**, donde puede pedir el premio al completar la tarjeta.
+  - Los sellos falsos se rechazan y se marcan.
+- **Código de seguridad:**
+  - Tocando la línea de estado del chat se ven 60 dígitos derivados de las dos claves de identidad, iguales en los dos teléfonos.
+  - Se puede marcar como verificado y la cabecera pasa a decir "🔒 Verificado". Si el contacto cambia de clave, la verificación se pierde.
+- **El nombre del emisor viaja dentro del sobre cifrado:** quien te escribe por primera vez aparece con su nombre (el server no lo ve) y se guarda como contacto, solo si vino cifrado.
+- **Cabecera del chat:** los nombres largos se cortan con "…" y no se pisan con el estado.
+- `sw.js`: cache `v38`.
+
+**Cómo se probó** (Playwright, 3 usuarios: tienda, cliente y servicio de entrega)
+
+| Prueba | Resultado |
+|---|---|
+| Ana publica su tienda y Caro su servicio de entrega | ok; Beto los ve arriba, con firma verificada |
+| Ficha con firma inválida | el server responde 403 |
+| Beto chatea desde la ficha | Ana recibe cifrado y ve el nombre "Beto" |
+| Pedido creado y luego confirmado | Beto lo ve en Mis pedidos, en estado confirmado |
+| Propuesta del agente "pasar a preparando", confirmada por Ana | Beto ve "preparando" |
+| 3 sellos de Ana | Beto tiene 3/3 verificados, con "Pedir mi premio" |
+| Sello con firma falsa | rechazado |
+| Código de seguridad | igual en los dos teléfonos; la cabecera pasa a "🔒 Verificado" |
+| Nombre de tienda con HTML | se ve como texto |
+| Pruebas anteriores (E2E, XSS, suplantación, ACK, reconexión, duplicados, guardar tienda) | siguen pasando |
+
+**Huecos que dejé a propósito** (ver [`docs/MODELO-NEGOCIO.md`](MODELO-NEGOCIO.md))
+- Dinero real y escrow real, comisiones, fidelización de tiendas, reseñas de compras reales, disputas y facturación: dependen del estudio de modelo de negocio y figura jurídica.
+- Escaneo del código de seguridad por QR con la cámara: por ahora se comparan los números.
+- El agente local corre en el teléfono de quien escribe si el worker de PC está apagado (pendiente desde la revisión). Sus propuestas quedan en ese teléfono.
+
+---
+
 ## 2026-10-07 — Rediseño, tanda 1: sacar el mockup, guiar y mostrar la privacidad
 
 Aplica la "Dirección acordada" de [`docs/UX.md`](UX.md).
