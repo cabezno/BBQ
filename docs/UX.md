@@ -101,6 +101,6 @@ Decisiones del dueño del proyecto:
 - [x] Directorio real de tiendas y servicios de entrega, con fichas firmadas
 - [x] Operativa de tiendas: pedidos con estados y aviso al cliente; bandeja "El agente propone"
 - [x] Fidelización de clientes: sellos firmados, Mis tarjetas y pedido de canje
-- [ ] Fidelización de tiendas, reseñas de compras reales y dinero real: dependen de `docs/MODELO-NEGOCIO.md`
+- [ ] Fidelización de tiendas, reseñas de compras reales y dinero real: dependen de `docs/MODELO-NEGOCIO.md` (estudio ya en el repo: `docs/MODELO-PAGOS-Y-ENTREGAS.md`)
 - [ ] Código de seguridad por QR (cámara)
 

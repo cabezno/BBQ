@@ -42,4 +42,4 @@
 - **Tiendas:** Mi tienda y Catálogo separados (alta, edición, stock y foto); configuración del agente; panel de escritorio.
 - **Servicios de entrega:** pedidos asignados, escaneo del QR del escrow, zonas y tarifas (la publicación ya está).
 - **Privacidad:** código de seguridad por QR con la cámara, exportar o borrar mis datos y verificación de dispositivos vinculados.
-- **Comercio con dinero real:** depende de [`MODELO-NEGOCIO.md`](MODELO-NEGOCIO.md).
+- **Comercio con dinero real:** depende de [`MODELO-NEGOCIO.md`](MODELO-NEGOCIO.md) y del estudio [`MODELO-PAGOS-Y-ENTREGAS.md`](MODELO-PAGOS-Y-ENTREGAS.md).

@@ -4,6 +4,32 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Estudio de modelo de negocio y figura jurídica en el repo
+
+**Qué cambió**
+- Nuevo `docs/MODELO-PAGOS-Y-ENTREGAS.md`: el estudio del 25 y 26/09 que estaba solo en la PC del dueño. Se recuperó de la sesión donde se hizo y se subió sin cambios de fondo. Cubre:
+  - Uruguay y el esquema PedidosYa (SAS marketplace + SAS de pagos inscripta como PSPC);
+  - la retención con captura diferida, el QR de entrega y el envío vendido por BBQ;
+  - la facturación electrónica y las cuentas Particular / Comercio;
+  - los ingresos, el 0,4% para vendedores, los premios por referidos y la cooperativa como opción;
+  - las preguntas para abogado, contador y adquirentes.
+- Se agregó la **§8b, "todo tercerizado vs cooperativa"**. Había quedado solo en el chat. Se marca como decisión abierta, con la recomendación de esa charla: arrancar tercerizado y proponer la cooperativa después.
+- `docs/MODELO-NEGOCIO.md` deja de ser un hueco. Ahora tiene el resumen del estudio, las decisiones abiertas y un cruce con el código: qué ya encaja, qué hay que cambiar y qué no cubre el estudio.
+
+**Por qué:** el dueño encontró la charla del estudio y pidió alinearlo con lo construido.
+
+**Cómo se probó:** solo documentación; se revisaron los puntos de código citados (`escrow-engine.js`: `merchantWallet`, `simpleHash`, `verifyAndSettleScan`; `app.js`; `referral-engine.js`; `logistics-engine.js`).
+
+**Pendiente**
+- **Código de entrega real:** hoy `verifyAndSettleScan` no compara el código. Es TEST, pero hay que arreglarlo antes de dinero real.
+- **Sin saldos en la app:** sacar el saldo/retiro de `merchantWallet`.
+- **Capa de pagos intercambiable** y conteo de referidos en el servidor.
+- **Cuentas:** Particular / Comercio.
+- **Decisiones abiertas:** tercerizado vs cooperativa, intermediario vs comisionista, y la duración del 0,4%.
+- **Fuera del estudio:** reseñas, disputas y protección de datos frente al servidor de pagos.
+
+---
+
 ## 2026-10-07 — Llamadas y audios robustos
 
 **Qué cambió**

@@ -87,6 +87,10 @@ Para leer la agenda del teléfono y push, se compila con **Capacitor**. Ver [`CA
 
 Un solo código para usuarios, tiendas, servicios de entrega y quien busca privacidad, en celular y en compu (PWA, Capacitor y Tauri). Ver [`docs/PLATAFORMAS.md`](docs/PLATAFORMAS.md).
 
+## 💼 Modelo de negocio
+
+Estudio (orientativo, Uruguay) en [`docs/MODELO-PAGOS-Y-ENTREGAS.md`](docs/MODELO-PAGOS-Y-ENTREGAS.md) y cruce con el código en [`docs/MODELO-NEGOCIO.md`](docs/MODELO-NEGOCIO.md). Hoy el dinero sigue en modo TEST.
+
 ## 📜 Cambios
 
 Ver [`docs/CAMBIOS.md`](docs/CAMBIOS.md): qué se cambió, cómo se probó y qué falta.
