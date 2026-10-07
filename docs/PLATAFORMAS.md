@@ -23,7 +23,7 @@
 
 ## Cimientos (sirven a todos los públicos)
 
-1. **La interfaz se adapta al rol.** "Yo" muestra herramientas de vendedor o de repartidor solo a quien tiene tienda o servicio; el resto ve chats y compras.
+1. ✅ **La interfaz se adapta al rol**, y cualquiera puede activar "Vender" o "Hacer entregas" desde Yo → Modos. "Yo" muestra herramientas de vendedor o de repartidor solo a quien tiene tienda o servicio; el resto ve chats y compras.
 2. **Dispositivos vinculados.** Misma identidad en celular y compu, al estilo WhatsApp Web:
    - **Vincular:** el teléfono firma una autorización para la clave del nuevo dispositivo, verificable sin servidor.
    - **Cifrado:** E2E con un sobre por dispositivo; el emisor cifra para todos los dispositivos del destinatario.

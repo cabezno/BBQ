@@ -52,7 +52,34 @@
         return `<div class="bbq-demo-banner"><i class="bi bi-info-circle"></i> ${text}</div>`;
     }
 
+    // ── Roles: la interfaz se adapta a lo que hacés, pero cualquiera puede activar un rol cuando quiera ──
+    // Se guarda la elección explícita (on/off); si no hay elección, se deduce de lo que ya existe.
+    const ROLES_KEY = 'bbq_roles';
+    function readRoleChoice() { try { return JSON.parse(localStorage.getItem(ROLES_KEY) || '{}') || {}; } catch (e) { return {}; } }
+    function writeRoleChoice(c) { try { localStorage.setItem(ROLES_KEY, JSON.stringify(c)); } catch (e) {} }
+    function detectedRoles() {
+        let store = false;
+        try {
+            const db = window.merchantStorage && window.merchantStorage.getDatabase && window.merchantStorage.getDatabase();
+            store = !!(db && db.userStore); // solo una tienda guardada de verdad (los productos de demo no cuentan)
+        } catch (e) {}
+        return { store, delivery: false }; // el servicio de entrega se detecta async (IndexedDB) en renderMe
+    }
+
     const UX = {
+        roles() {
+            const c = readRoleChoice(), d = detectedRoles();
+            return {
+                store: c.store != null ? !!c.store : d.store,
+                delivery: c.delivery != null ? !!c.delivery : !!this._hasDelivery
+            };
+        },
+        setRole(role, on) {
+            const c = readRoleChoice(); c[role] = !!on; writeRoleChoice(c);
+            if (window.bbqToast) window.bbqToast(on ? (role === 'store' ? '🏪 Modo vender activado' : '🚚 Modo entregas activado') : 'Modo desactivado');
+            this.renderMe();
+        },
+
         // ── Pestaña "Yo" ──────────────────────────────────────────────
         renderMe() {
             const el = document.getElementById('viewMeSection');
@@ -60,6 +87,17 @@
             const p = (window.BBQIdentity && window.BBQIdentity.getProfile && window.BBQIdentity.getProfile()) || {};
             const local = (window.buyerStorage && window.buyerStorage.getUserProfile && window.buyerStorage.getUserProfile()) || {};
             const avatar = window.bbqAvatar(p.peerId, p.name, local.avatar);
+
+            const roles = this.roles();
+            // ¿Tengo servicio de entrega guardado? (async; si cambia, se vuelve a pintar)
+            if (this._hasDelivery === undefined && window.BBQListings) {
+                window.BBQListings.getMyDelivery().then(d => { this._hasDelivery = !!(d && d.name); if (this._hasDelivery) this.renderMe(); });
+            }
+            const toggle = (role, icon, title, sub) => `<label class="bbq-me-row bbq-me-toggle">
+                <span class="bbq-me-icon"><i class="bi ${icon}"></i></span>
+                <span class="bbq-me-text"><span class="bbq-me-title">${title}</span><span class="bbq-me-sub">${sub}</span></span>
+                <input type="checkbox" class="bbq-switch" ${roles[role] ? 'checked' : ''} onchange="BBQUX.setRole('${role}', this.checked)">
+            </label>`;
 
             el.innerHTML = `
                 <button class="bbq-me-card" onclick="openModal('modalProfile')">
@@ -72,7 +110,8 @@
                     <i class="bi bi-pencil bbq-me-chev"></i>
                 </button>
 
-                <div class="bbq-me-group-title">Mi comercio</div>
+                ${roles.store ? `
+                <div class="bbq-me-group-title">Mi tienda</div>
                 <div class="bbq-me-group">
                     ${row('bi-shop', 'Mi tienda', 'Catálogo, precios, stock y agente', "openModal('modalCreateStore')")}
                     ${row('bi-broadcast', 'Publicar en el directorio', 'Que te encuentren en Tiendas', 'BBQUX.openPublishStore()', 'meBadgePublished')}
@@ -80,8 +119,14 @@
                     ${row('bi-robot', 'El agente propone', 'Acciones del agente para confirmar', 'BBQUX.openProposals()', 'meBadgeProposals')}
                     ${row('bi-award', 'Programa de fidelidad', 'Sellos firmados por tu tienda', 'BBQUX.openLoyaltyProgram()')}
                     ${row('bi-credit-card', 'Cobrar a un cliente', 'Factura con compra protegida (modo prueba)', 'openMerchantChargeModal()')}
+                    ${row('bi-cpu', 'Automatizaciones', 'Reglas para tu tienda', "openModal('modalAutomations')")}
+                </div>` : ''}
+
+                ${roles.delivery ? `
+                <div class="bbq-me-group-title">Mis entregas</div>
+                <div class="bbq-me-group">
                     ${row('bi-truck', 'Mi servicio de entrega', 'Zonas, tarifas y publicación', 'BBQUX.openDeliveryForm()')}
-                </div>
+                </div>` : ''}
 
                 <div class="bbq-me-group-title">Mis compras</div>
                 <div class="bbq-me-group">
@@ -89,10 +134,15 @@
                     ${row('bi-ticket-perforated', 'Mis tarjetas de fidelidad', 'Sellos verificados de cada tienda', 'BBQUX.openMyCards()')}
                 </div>
 
+                <div class="bbq-me-group-title">Modos</div>
+                <div class="bbq-me-group">
+                    ${toggle('store', 'bi-shop', 'Vender en BBQ', 'Tienda, catálogo, pedidos, agente y fidelidad')}
+                    ${toggle('delivery', 'bi-truck', 'Hacer entregas', 'Publicá tus zonas y tarifas')}
+                </div>
+
                 <div class="bbq-me-group-title">Inteligencia artificial</div>
                 <div class="bbq-me-group">
                     ${row('bi-robot', 'Conectar IA', 'Tu API, en el teléfono o en tu PC. Sin IA también funciona', "openModal('modalAiSetup')")}
-                    ${row('bi-cpu', 'Automatizaciones', 'Reglas para tu tienda', "openModal('modalAutomations')")}
                 </div>
 
                 <div class="bbq-me-group-title">Privacidad y seguridad</div>

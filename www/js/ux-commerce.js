@@ -140,6 +140,7 @@
             const msg = document.getElementById('bbqDelMsg');
             if (!d.name) { if (msg) msg.textContent = '⚠️ Poné un nombre'; return; }
             await window.BBQListings.saveMyDelivery(d);
+            this._hasDelivery = true;
             if (!publish) { if (msg) msg.textContent = '✅ Guardado'; return; }
             if (!zones.length) { if (msg) msg.textContent = '⚠️ Agregá al menos una zona'; return; }
             if (msg) msg.textContent = 'Publicando…';

@@ -4,6 +4,31 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — La interfaz se adapta al rol, con modos siempre activables
+
+**Decisión del dueño:** la interfaz se adapta al rol de cada uno, pero **cualquiera puede activar cualquier rol cuando quiera**.
+
+**Qué cambió** (pestaña Yo, `www/js/ux.js`)
+- **Siempre visible:** "Mis compras".
+- **"Mi tienda"** (tienda, publicar, pedidos, el agente propone, fidelidad, cobrar y automatizaciones): aparece si tenés una tienda guardada o si activaste el modo.
+- **"Mis entregas":** aparece si tenés un servicio de entrega guardado o si lo activaste.
+- **Sección "Modos":** interruptores "Vender en BBQ" y "Hacer entregas". La elección explícita queda guardada (`localStorage: bbq_roles`). Si no elegiste nada, se deduce de lo que ya tenés, y los productos de demo no cuentan como tienda.
+- `sw.js`: cache `v41`.
+
+**Cómo se probó** (Playwright)
+
+| Caso | Resultado |
+|---|---|
+| Usuario nuevo | solo ve Mis compras y Modos |
+| Activar Vender | aparece Mi tienda |
+| Activar Entregas | aparece Mis entregas |
+| Recargar la app | se mantiene la elección |
+| Desactivar | la sección desaparece |
+| Tienda guardada sin elección explícita | Mi tienda aparece sola |
+| Errores de JS | ninguno |
+
+---
+
 ## 2026-10-07 — Públicos y plataformas (decisión)
 
 - **Decisión:** llegar a todos los públicos a la vez (usuarios, tiendas, servicios de entrega y quien busca privacidad), en celular y en compu.
