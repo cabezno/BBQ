@@ -205,6 +205,29 @@ app.get('/api/user/:phone', (req, res) => {
     res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey, ecdhSig: u.ecdhSig } });
 });
 
+// ── Servidores STUN/TURN para WebRTC (chat P2P, llamadas y vivos) ──
+// Sin TURN, muchas redes móviles o con NAT estricto no logran conectar directo.
+// Configuración por variables de entorno (ninguna es obligatoria):
+//   TURN_URLS="turn:turn.ejemplo.com:3478,turns:turn.ejemplo.com:5349"
+//   y una de dos:
+//   TURN_SECRET=...              → credenciales efímeras (coturn "use-auth-secret"), válidas 24 h
+//   TURN_USERNAME / TURN_CREDENTIAL → credenciales fijas
+app.get('/api/ice-servers', (req, res) => {
+    const ice = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+    const urls = (process.env.TURN_URLS || '').split(',').map(u => u.trim()).filter(Boolean);
+    if (urls.length) {
+        if (process.env.TURN_SECRET) {
+            const username = `${Math.floor(Date.now() / 1000) + 24 * 3600}:bbq`;
+            const credential = require('crypto').createHmac('sha1', process.env.TURN_SECRET).update(username).digest('base64');
+            ice.push({ urls, username, credential });
+        } else if (process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+            ice.push({ urls, username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL });
+        }
+    }
+    res.set('Cache-Control', 'no-store');
+    res.json({ ok: true, iceServers: ice });
+});
+
 // ── Directorio de TIENDAS y SERVICIOS DE ENTREGA (publicados por sus dueños) ──
 // Cada ficha va FIRMADA con la clave de identidad del dueño: el server la verifica y la guarda
 // tal cual (string), así cualquier cliente puede re-verificarla sin confiar en el server.

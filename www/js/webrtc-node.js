@@ -16,6 +16,15 @@
     ];
 
     const BBQNet = {
+        _ice: null, // servidores STUN/TURN que da el server (/api/ice-servers); si no, los de arriba
+        iceServers() { return this._ice || ICE_SERVERS; },
+        async loadIceServers() {
+            try {
+                const r = await fetch(`${window.BBQ_SERVER || location.origin}/api/ice-servers`);
+                const j = await r.json();
+                if (j && Array.isArray(j.iceServers) && j.iceServers.length) this._ice = j.iceServers;
+            } catch (e) {}
+        },
         peerId: null,
         ws: null,
         wsReady: false,
@@ -29,6 +38,7 @@
         // ── Init: conecta la señalización y se anuncia ──
         init(peerId) {
             this.peerId = peerId;
+            this.loadIceServers();
             this._connectSignaling();
             // Al volver a primer plano, reconectar de una si el socket murió.
             if (!this._visHooked && typeof document !== 'undefined') {
@@ -188,7 +198,7 @@
             let entry = this.peers.get(peerId);
             if (entry) return entry;
 
-            const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+            const pc = new RTCPeerConnection({ iceServers: this.iceServers() });
             entry = { pc, channel: null, ready: false };
             this.peers.set(peerId, entry);
 

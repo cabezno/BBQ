@@ -838,24 +838,28 @@ async function handleAttachmentFile(file) {
         const card = isImage
             ? { type: 'image', id: attId }
             : { type: 'file', id: attId, name: file.name, size: file.size, mime: file.type };
+        const willSend = !!(contact && contact.isReal && window.BBQNet);
         const msg = {
             id: 'msg_' + Date.now(),
             sender: window.MY_PEER_ID || 'me',
             text: isImage ? '📷 Foto' : ('📄 ' + file.name),
             timestamp: new Date().toISOString(),
-            payloadCard: card
+            payloadCard: card,
+            status: willSend ? 'pending' : 'sent' // ⏳ hasta el ACK, como el texto
         };
         window.buyerStorage.appendChatMessage(chatId, msg);
         renderMobileMessages();
         renderMobileChatList();
         // Enviar P2P (bytes en base64) al contacto real.
-        if (contact && contact.isReal && window.BBQNet) {
-            if (dataUrl.length > 1200000) {
-                if (window.bbqToast) window.bbqToast('Archivo muy grande para enviar por P2P');
+        if (willSend) {
+            // ~4,5 MB de archivo (en base64 y cifrado sigue entrando en el límite del relay).
+            if (dataUrl.length > 6000000) {
+                if (window.bbqToast) window.bbqToast('Archivo muy grande (máx. ~4 MB)');
             } else {
-                window.BBQNet.send(chatId, { type: 'attachment', message: msg, data: dataUrl }).then(r => {
-                    if (!r.ok && window.bbqToast) window.bbqToast('⚠️ No entregado (contacto offline)');
-                });
+                // Por el outbox: si el contacto está desconectado, se entrega cuando vuelva (⏳ → ✓✓).
+                const payload = { type: 'attachment', message: msg, data: dataUrl };
+                if (window.BBQ && window.BBQ.outboxAdd) await window.BBQ.outboxAdd(chatId, payload);
+                window.BBQNet.send(chatId, payload);
             }
         }
     };
@@ -2501,10 +2505,11 @@ function renderCallsSection() {
         return;
     }
 
-    const typeLabel = { incoming: 'Entrante', outgoing: 'Saliente', missed: 'Perdida' };
+    const typeLabel = { incoming: 'Entrante', outgoing: 'Saliente', missed: 'Perdida', declined: 'Rechazada' };
+    const dur = (s) => s ? ` · ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '';
     container.innerHTML = calls.map(c => {
         const name = (CONTACTS_DATA[c.contactId] && CONTACTS_DATA[c.contactId].name) || c.contactName || 'Contacto';
-        const color = c.type === 'missed' ? '#ef4444' : (c.type === 'incoming' ? 'var(--wa-green)' : 'var(--wa-text-secondary)');
+        const color = (c.type === 'missed') ? '#ef4444' : 'var(--wa-text-secondary)';
         const arrow = c.type === 'outgoing' ? 'up-right' : 'down-left';
         return `
         <div class="call-log-item">
@@ -2512,7 +2517,7 @@ function renderCallsSection() {
             <div class="call-info">
                 <div class="font-inter-black" style="font-size:0.9rem;">${escHtml(name)}</div>
                 <div class="font-inter-light" style="font-size:0.75rem; color:${color};">
-                    <i class="bi bi-arrow-${arrow}"></i> ${typeLabel[c.type] || ''}${c.video ? ' · video' : ''} · ${formatTime(c.timestamp)}
+                    <i class="bi bi-arrow-${arrow}"></i> ${typeLabel[c.type] || ''}${c.video ? ' · video' : ''}${dur(c.duration)} · ${formatTime(c.timestamp)}
                 </div>
             </div>
             <button class="btn-call-action" aria-label="Llamar" onclick="window.BBQCall && window.BBQCall.startCall('${safeId(c.contactId)}', ${c.video ? 'true' : 'false'})"><i class="bi bi-telephone-outbound-fill"></i></button>
@@ -2786,24 +2791,28 @@ async function finalizeVoiceRecording() {
     try { await window.BBQDB.set('messages', vnId, blob); } catch (e) {}
     bbqVoiceURLs[vnId] = URL.createObjectURL(blob);
 
+    const vContact = CONTACTS_DATA[currentChatId];
+    const vWillSend = !!(vContact && vContact.isReal && window.BBQNet);
     const msgObj = {
         id: 'msg_' + Date.now(),
         sender: window.MY_PEER_ID || 'me',
         text: `🎤 Nota de voz (${durationStr})`,
         timestamp: new Date().toISOString(),
-        payloadCard: { type: 'voice_note', id: vnId, durationStr: durationStr }
+        payloadCard: { type: 'voice_note', id: vnId, durationStr: durationStr },
+        status: vWillSend ? 'pending' : 'sent'
     };
     window.buyerStorage.appendChatMessage(currentChatId, msgObj);
     renderMobileMessages();
     renderMobileChatList();
 
     // Enviar por P2P al contacto real (audio en base64 por el DataChannel).
-    const contact = CONTACTS_DATA[currentChatId];
-    if (contact && contact.isReal && window.BBQNet) {
+    if (vWillSend) {
+        const cid = currentChatId;
         const b64 = await bbqBlobToBase64(blob);
-        window.BBQNet.send(currentChatId, { type: 'voice', message: msgObj, audio: b64 }).then(r => {
-            if (!r.ok && window.bbqToast) window.bbqToast('⚠️ Nota no entregada (contacto offline)');
-        });
+        // Por el outbox: si el contacto está desconectado, la nota se entrega cuando vuelva.
+        const payload = { type: 'voice', message: msgObj, audio: b64 };
+        if (window.BBQ && window.BBQ.outboxAdd) await window.BBQ.outboxAdd(cid, payload);
+        window.BBQNet.send(cid, payload);
     }
 }
 
