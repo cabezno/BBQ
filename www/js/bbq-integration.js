@@ -139,7 +139,11 @@
                     if (typeof renderMobileMessages === 'function') renderMobileMessages();
                 }
                 if (typeof renderMobileChatList === 'function') renderMobileChatList();
-                bbqToast('💬 ' + (CONTACTS_DATA[fromPeerId]?.name || fromPeerId));
+                // Aviso solo si NO estoy mirando ese chat.
+                const convOpen = document.getElementById('screenConversation');
+                if (!(convOpen && convOpen.classList.contains('active') && currentChatId === fromPeerId)) {
+                    bbqToast('💬 ' + (CONTACTS_DATA[fromPeerId]?.name || fromPeerId));
+                }
             });
 
             window.BBQNet.onPeerState((peerId, state) => {

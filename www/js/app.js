@@ -401,7 +401,7 @@ function selectMobileChat(chatId) {
     if (!contact) return;
 
     document.getElementById('mActiveName').textContent = contact.name;
-    document.getElementById('mActiveAvatar').textContent = contact.avatar;
+    document.getElementById('mActiveAvatar').innerHTML = bbqAvatar(chatId, contact.name, contact.avatar);
     const e2eOn = !!(window.BBQE2E && window.BBQE2E.knows(chatId));
     document.getElementById('mActiveStatus').textContent = (e2eOn ? '🔒 Cifrado · ' : '') + (contact.status || '');
 
@@ -493,8 +493,8 @@ function renderMobileChatList() {
         return `
             <div class="m-chat-item" onclick="selectMobileChat('${safeId(id)}')">
                 <div class="m-avatar">
-                    ${c.avatar}
-                    <div class="online-dot"></div>
+                    ${bbqAvatar(id, c.name, c.avatar)}
+                    ${/en línea/.test(c.status || '') ? '<div class="online-dot"></div>' : ''}
                 </div>
                 <div class="m-chat-details">
                     <div class="m-chat-top">
@@ -549,11 +549,10 @@ function renderMobileMessages() {
             <div class="wa-msg-row ${isOutgoing ? 'outgoing' : 'incoming'} ${isAi ? 'ai-msg' : ''}">
                 <div class="wa-msg-bubble">
                     ${isAi ? '<div class="msg-author-tag">⚡ IA Local Tienda</div>' : ''}
-                    <div>${escHtml(m.text)}</div>
+                    ${(m.payloadCard && ['order_update', 'stamp'].includes(m.payloadCard.type)) ? '' : `<div>${escHtml(m.text)}</div>`}
                     ${m.payloadCard ? renderPayloadCard(m.payloadCard) : ''}
                     <div class="msg-footer-meta">
-                        ${(m.text && !m.payloadCard && !isOutgoing) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
-                        ${(!isOutgoing && m.e2e) ? '<span title="Cifrado de extremo a extremo" style="font-size:0.65rem;">🔒</span>' : ''}
+                        ${(m.text && !m.payloadCard && !isOutgoing && isAi) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
                         <span class="msg-timestamp">${formatTime(m.timestamp)}</span>
                         ${isOutgoing ? (m.status === 'pending' ? '<span class="wa-tick" style="color:var(--wa-tick-gray);" title="Esperando que el contacto se conecte">⏳</span>' : '<span class="wa-tick read">✓✓</span>') : ''}
                     </div>
@@ -1029,12 +1028,18 @@ function handleSaveStore() {
 
 function loadStoreData() {
     const s = window.merchantStorage.getUserStore();
-    if (s && document.getElementById('storeInputName')) {
-        document.getElementById('storeInputName').value = s.name || 'TechZone Store';
-        if (s.courierPartner && document.getElementById('storeInputCourierPartner')) {
-            document.getElementById('storeInputCourierPartner').value = s.courierPartner;
-        }
-    }
+    if (!s || !document.getElementById('storeInputName')) return;
+    document.getElementById('storeInputName').value = s.name || '';
+    // En los <select>, si el valor guardado no es una opción de la lista, se agrega para no perderlo.
+    const setSel = (id, v) => {
+        const el = document.getElementById(id);
+        if (!el || !v) return;
+        if (![...el.options].some(o => o.value === v)) { const o = document.createElement('option'); o.value = v; o.textContent = v; el.appendChild(o); }
+        el.value = v;
+    };
+    setSel('storeInputCategory', s.category);
+    setSel('storeInputRegion', s.region);
+    setSel('storeInputCourierPartner', s.courierPartner);
 }
 
 function handleSaveAiSetup() {
@@ -1175,6 +1180,7 @@ function openModal(modalId) {
             label.textContent = isPickup ? '🔒 Retención Auth & Hold (🏪 Retiro en Tienda - $0 Envío)' : '🔒 Retención Auth & Hold (🚚 Envío por Courier)';
         }
     } else if (modalId === 'modalCreateStore') {
+        loadStoreData();
         renderMerchantWallet();
     } else if (modalId === 'modalCreateStatus') {
         populateStatusProductsDropdowns();
@@ -1864,7 +1870,7 @@ function initInstagramStoriesBar() {
         <!-- Mi Historia bubble -->
         <div class="story-item-bubble" onclick="openModal('modalCreateStatus')">
             <div class="story-avatar-container story-ring-none">
-                <div class="story-avatar-img">${userProfile.avatar || '👤'}</div>
+                <div class="story-avatar-img">${bbqAvatar(window.MY_PEER_ID, (window.BBQIdentity && window.BBQIdentity.getProfile() || {}).name, userProfile.avatar)}</div>
                 <div class="story-add-badge">+</div>
             </div>
             <span class="story-label font-inter-light">Tu estado</span>
@@ -2282,7 +2288,7 @@ function handleLiveSearchFilter() {
 }
 
 function formatTime(timestamp) {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function truncateText(text, length) {
@@ -2321,7 +2327,7 @@ function updateFabIcon(tabName) {
     if (!fab) return;
 
     const icons = {
-        'chats': '<i class="bi bi-chat-plus-fill"></i>',
+        'chats': '<i class="bi bi-pencil-square"></i>',
         'calls': '<i class="bi bi-telephone-plus-fill"></i>',
         'updates': '<i class="bi bi-camera-fill"></i>',
         'stores': '<i class="bi bi-shop"></i>',
@@ -2343,7 +2349,7 @@ function renderContactPicker(mode = 'chat') {
 
     if (titleEl) {
         titleEl.innerHTML = mode === 'chat' ? 
-            '<i class="bi bi-chat-plus-fill text-success"></i> Iniciar Nuevo Chat P2P' : 
+            '<i class="bi bi-pencil-square text-success"></i> Nuevo chat' : 
             '<i class="bi bi-telephone-plus-fill text-info"></i> Iniciar Llamada P2P';
     }
 
@@ -2359,7 +2365,7 @@ function renderContactPicker(mode = 'chat') {
         return `
             <div class="wa-store-card" style="margin-bottom:8px;">
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <div style="font-size:1.6rem;">${c.avatar}</div>
+                    <div class="m-avatar" style="width:42px;height:42px;">${bbqAvatar(id, c.name, c.avatar)}</div>
                     <div>
                         <div class="font-inter-black" style="font-size:0.9rem;">${escHtml(c.name)}</div>
                         <div class="font-inter-light" style="font-size:0.72rem; color:var(--wa-text-secondary);">${escHtml(c.status)}</div>
@@ -2495,18 +2501,23 @@ function renderCallsSection() {
         return;
     }
 
-    container.innerHTML = calls.map(c => `
+    const typeLabel = { incoming: 'Entrante', outgoing: 'Saliente', missed: 'Perdida' };
+    container.innerHTML = calls.map(c => {
+        const name = (CONTACTS_DATA[c.contactId] && CONTACTS_DATA[c.contactId].name) || c.contactName || 'Contacto';
+        const color = c.type === 'missed' ? '#ef4444' : (c.type === 'incoming' ? 'var(--wa-green)' : 'var(--wa-text-secondary)');
+        const arrow = c.type === 'outgoing' ? 'up-right' : 'down-left';
+        return `
         <div class="call-log-item">
-            <div class="call-avatar">${c.contactAvatar || '👤'}</div>
+            <div class="m-avatar" style="width:44px;height:44px;">${bbqAvatar(c.contactId, name, c.contactAvatar)}</div>
             <div class="call-info">
-                <div class="font-inter-black" style="font-size:0.9rem;">${c.contactName}</div>
-                <div class="font-inter-light" style="font-size:0.75rem; color:${c.type === 'incoming' ? 'var(--wa-green)' : 'var(--wa-text-secondary)'};">
-                    <i class="bi bi-arrow-${c.type === 'incoming' ? 'down-left' : 'up-right'}"></i> ${c.type === 'incoming' ? 'Entrante' : 'Saliente'} (${formatTime(c.timestamp)})
+                <div class="font-inter-black" style="font-size:0.9rem;">${escHtml(name)}</div>
+                <div class="font-inter-light" style="font-size:0.75rem; color:${color};">
+                    <i class="bi bi-arrow-${arrow}"></i> ${typeLabel[c.type] || ''}${c.video ? ' · video' : ''} · ${formatTime(c.timestamp)}
                 </div>
             </div>
-            <button class="btn-call-action" onclick="alert('📞 Llamando a ${c.contactName} por P2P...')"><i class="bi bi-telephone-out-fill"></i></button>
-        </div>
-    `).join('');
+            <button class="btn-call-action" aria-label="Llamar" onclick="window.BBQCall && window.BBQCall.startCall('${safeId(c.contactId)}', ${c.video ? 'true' : 'false'})"><i class="bi bi-telephone-outbound-fill"></i></button>
+        </div>`;
+    }).join('');
 }
 
 function renderCommunitySection() {

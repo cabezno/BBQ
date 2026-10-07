@@ -1924,3 +1924,16 @@ body.mobile-body {
 /* Cabecera del chat: nombre y estado en una línea cada uno (nombres largos no se pisan) */
 .m-contact-details { min-width:0; flex:1; overflow:hidden; }
 .m-contact-name, .m-contact-status { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* ── Refinamiento 2026-10: avatares, menos ruido, tarjetas ── */
+.m-avatar .bbq-av-img { display:block; }
+.bbq-av, .bbq-av-img { width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:Inter,system-ui,sans-serif; letter-spacing:0.02em; font-size:1.05em; }
+.bbq-av-img { object-fit:cover; }
+.bbq-av-emoji { background:var(--wa-incoming-bg); font-size:1.3em; }
+.bbq-me-avatar .bbq-av { font-size:1.4rem; }
+/* La píldora de conexión solo aparece cuando hay un problema */
+.ws-connection-pill.conn-online { display:none; }
+@media (prefers-color-scheme: light) {
+    .bbq-order-card { background:rgba(0,0,0,0.035); }
+    .bottom-nav-btn.active .nav-label, .bottom-nav-btn.active .nav-icon { color:#c2410c; }
+}

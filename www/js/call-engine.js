@@ -203,7 +203,7 @@ class CallEngine {
         ov.innerHTML = `
             ${this.withVideo ? videoArea : ''}
             <div style="z-index:3; text-align:center; margin-top:30px;">
-                <div style="font-size:4rem;">${this._avatar(this.peerId)}</div>
+                <div class="m-avatar" style="width:96px;height:96px;margin:0 auto;font-size:2.4rem;">${bbqAvatar(this.peerId, this._name(this.peerId), this._avatar(this.peerId))}</div>
                 <div style="font-size:1.5rem; font-weight:900; margin-top:10px;">${escHtml(name)}</div>
                 <div style="font-size:0.95rem; color:var(--wa-text-secondary); margin-top:6px;">${status}</div>
             </div>

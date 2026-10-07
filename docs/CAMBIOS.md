@@ -4,6 +4,46 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Refinamiento de interfaz (tanda 3)
+
+**Qué cambió**
+- **Avatares con iniciales y color propio** por contacto (`bbqAvatar()` en `sanitize.js`):
+  - Muestran la foto si hay; si el nombre arranca con emoji (bots, tiendas), ese emoji.
+  - Se ven en la lista de chats, la cabecera del chat, el selector de contactos, la pantalla de llamada, "Yo" y "Tu estado". Antes todos eran 👤.
+- **Menos ruido:**
+  - La píldora "Conectado" solo aparece si hay un problema de conexión.
+  - Se sacó el 🔒 de cada burbuja: queda en la cabecera.
+  - El 🔊 queda solo en respuestas de IA.
+  - No se avisa con un cartel de un mensaje del chat que estás mirando.
+  - La hora se muestra en formato 24 h (es-AR).
+  - El punto "en línea" de la lista solo aparece si el contacto está en línea de verdad.
+- **Tarjetas sin duplicar:** las de pedido y las de sello ya no repiten su título como texto arriba. En modo claro, la tarjeta de pedido tiene un fondo más liviano.
+- **Bug de Mi tienda:** al abrirse, ahora carga la tienda guardada (nombre, rubro, zona, courier). Antes mostraba "Mi Tienda P2P".
+- **Íconos que no existían** en la versión local de los íconos: el botón flotante de Chats aparecía vacío. Ahora usa `bi-pencil-square` (nuevo chat) y `bi-telephone-outbound-fill` (volver a llamar).
+- **Registro de llamadas:**
+  - Cada fila muestra avatar, nombre escapado y tipo (entrante, saliente o perdida).
+  - El botón llama de verdad (`BBQCall.startCall`). Antes era un `alert` que interpolaba el nombre sin escapar.
+- **Modo claro:** mejor contraste en la pestaña activa.
+- `sw.js`: cache `v39`.
+
+**Cómo se probó**
+- Capturas de chat, lista de chats, Yo y Mi tienda, en modo claro y oscuro.
+- Volvieron a pasar las pruebas de XSS, E2E, comercio (tres usuarios) y confiabilidad.
+
+**Pendiente** (propuesto, no hecho)
+- Separar "Mi tienda" (datos de la tienda) de "Catálogo" (lista de productos con alta, edición, stock y foto).
+- En "Yo", mostrar las herramientas de vendedor solo a quien tiene tienda; a los demás, un botón "Abrir mi tienda".
+- Unificar el estilo de las fichas de ejemplo con las reales.
+- Decidir con el dueño cuánto protagonismo tiene el naranja.
+- **Llamadas y audios:**
+  - Guardar el historial de llamadas: hoy el motor no registra nada.
+  - No perder los candidatos ICE de quien llama.
+  - Timeout cuando el otro no atiende.
+  - TURN configurable.
+  - Notas de voz y adjuntos por el outbox.
+
+---
+
 ## 2026-10-07 — Comercio, tanda 2: directorio real, pedidos, agente, fidelidad y código de seguridad
 
 **Qué cambió**

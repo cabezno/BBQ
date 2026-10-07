@@ -59,8 +59,7 @@
             if (!el) return;
             const p = (window.BBQIdentity && window.BBQIdentity.getProfile && window.BBQIdentity.getProfile()) || {};
             const local = (window.buyerStorage && window.buyerStorage.getUserProfile && window.buyerStorage.getUserProfile()) || {};
-            const avatar = local.avatar && String(local.avatar).startsWith('data:image')
-                ? `<img src="${esc(local.avatar)}" alt="">` : esc(local.avatar || '👤');
+            const avatar = window.bbqAvatar(p.peerId, p.name, local.avatar);
 
             el.innerHTML = `
                 <button class="bbq-me-card" onclick="openModal('modalProfile')">
