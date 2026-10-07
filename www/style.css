@@ -1937,3 +1937,44 @@ body.mobile-body {
     .bbq-order-card { background:rgba(0,0,0,0.035); }
     .bottom-nav-btn.active .nav-label, .bottom-nav-btn.active .nav-icon { color:#c2410c; }
 }
+
+/* ==========================================================================
+   SOBRIO TIPO WHATSAPP (decisión 2026-10-07)
+   El naranja es solo ACENTO: color sólido, sin degradados, sin brillos ni bordes rojos.
+   La interfaz tiene que sentirse como WhatsApp para que el usuario se adapte rápido.
+   ========================================================================== */
+:root {
+    --bbq-accent: #f59e0b;            /* acento único */
+    --bbq-accent-ink: #1a1a1a;         /* texto sobre el acento */
+    --bbq-accent-soft: rgba(245, 158, 11, 0.16);   /* fondo de chips/pestaña activa */
+    --bbq-accent-text: #f59e0b;        /* texto en acento sobre fondo neutro */
+    --bbq-gradient-primary: var(--bbq-accent);
+    --wa-green-fab: var(--bbq-accent);
+}
+@media (prefers-color-scheme: light) {
+    :root { --bbq-accent-soft: rgba(234, 88, 12, 0.10); --bbq-accent-text: #c2410c; }
+}
+
+/* Botón flotante: cuadrado redondeado y sombra suave (como WhatsApp) */
+.mobile-fab { border:none !important; border-radius:16px !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important; color:var(--bbq-accent-ink) !important; }
+/* Enviar / grabar y reproducir audio: sólidos, sin brillo */
+.m-send-btn, .voice-play-btn { border:none !important; box-shadow:none !important; background:var(--bbq-accent) !important; color:var(--bbq-accent-ink) !important; }
+/* Botones primarios: sólidos */
+.btn-wa-primary, .bbq-empty-btn { border:none !important; box-shadow:none !important; background:var(--bbq-accent) !important; color:var(--bbq-accent-ink) !important; }
+/* Chips de filtro: activo = fondo tenue + texto en acento (como los filtros de WhatsApp) */
+.filter-chip-pill.active { background:var(--bbq-accent-soft) !important; color:var(--bbq-accent-text) !important; border:1px solid transparent !important; box-shadow:none !important; }
+/* Segmento Tiendas | Entregas: igual que los chips */
+.bbq-segment-btn.active { background:var(--bbq-accent-soft); color:var(--bbq-accent-text); }
+/* Pestaña activa de la barra inferior: pastilla tenue */
+.bottom-nav-btn.active { background:var(--bbq-accent-soft) !important; }
+.bottom-nav-btn.active .nav-label, .bottom-nav-btn.active .nav-icon { color:var(--bbq-accent-text) !important; }
+/* Estados: anillo sólido (no degradado tipo Instagram) */
+.story-ring-store, .story-ring-contact { background:var(--bbq-accent) !important; }
+.story-ring-live { background:#ef4444 !important; }
+/* Tiendas de ejemplo: sin marquesina ni insignias estridentes */
+.store-marquee-ticker { background:var(--wa-dark-bg) !important; border-color:var(--wa-border-light) !important; }
+.badge-most-visited { background:var(--bbq-accent-soft) !important; color:var(--bbq-accent-text) !important; box-shadow:none !important; }
+/* Tarjeta de sello: tenue */
+.bbq-stamp-card { background:var(--bbq-accent-soft); }
+/* Cabecera del chat: el estado en gris, como WhatsApp */
+.m-contact-status { color:var(--wa-text-secondary) !important; }

@@ -228,7 +228,7 @@
                     </div>
                     <input id="bbqAddPhone" type="tel" placeholder="Número (ej: +54 9 11 5555-1234)"
                         style="width:100%; padding:13px; margin-bottom:10px; border-radius:12px; border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); font-size:1rem; outline:none;">
-                    <button id="bbqAddSearch" style="width:100%; padding:13px; border-radius:12px; border:none; cursor:pointer; background:linear-gradient(90deg,#f59e0b,#f97316); color:#0b141a; font-weight:900; margin-bottom:10px;">
+                    <button id="bbqAddSearch" style="width:100%; padding:13px; border-radius:12px; border:none; cursor:pointer; background:var(--bbq-accent); color:var(--bbq-accent-ink); font-weight:900; margin-bottom:10px;">
                         Buscar en BBQ y agregar
                     </button>
                     <button id="bbqImportAgenda" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--wa-border-light); cursor:pointer; background:var(--wa-dark-bg); color:var(--wa-text-primary); font-weight:600; margin-bottom:8px;">

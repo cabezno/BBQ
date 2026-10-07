@@ -12,6 +12,10 @@
 - IA del usuario: API propia, on-device o vía su PC de escritorio. **Puede no haber IA** (sin saldo): todo tiene que seguir funcionando sin IA.
 - Comercio libre y seguro (escrow), sin intermediario que decida.
 
+## Diseño
+- **Sobrio, como WhatsApp**: que se sienta familiar para que el usuario se adapte rápido. El naranja es solo **acento** (`--bbq-accent`): botones primarios, pestaña activa y chips activos. Sin degradados, sin brillos y sin bordes llamativos.
+- Ver `docs/UX.md` para la dirección acordada.
+
 ## Convenciones técnicas
 - Todo dato que venga de otro peer o del directorio se pinta con `escHtml()` / `safeId()` (`www/js/sanitize.js`).
 - El server nunca confía en el `from` del cliente: usa la identidad autenticada del socket.

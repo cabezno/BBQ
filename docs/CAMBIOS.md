@@ -4,6 +4,25 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Estilo sobrio tipo WhatsApp (tanda 4)
+
+**Decisión del dueño:** la app tiene que sentirse como WhatsApp para que el usuario se adapte rápido. El naranja queda solo como acento. Quedó registrado en `CLAUDE.md` y en `docs/UX.md`.
+
+**Qué cambió** (bloque "SOBRIO TIPO WHATSAPP" al final de `www/style.css`)
+- **Un solo acento sólido:** las variables de degradado (`--bbq-gradient-primary`, `--wa-green-fab`) pasan a ser el color de acento, así que los degradados desaparecen en toda la app de una vez.
+- **Botón flotante:** cuadrado redondeado, con sombra suave y sin brillo naranja.
+- **Botones** de enviar, grabar, reproducir audio y los primarios: sólidos, sin bordes rojos ni brillo.
+- **Chips activos, segmento Tiendas | Entregas y pestaña activa:** fondo tenue con texto en acento, como los filtros de WhatsApp.
+- **Anillos de estados:** sólidos, en lugar del degradado tipo Instagram.
+- **Tiendas de ejemplo:** sin marquesina estridente ni insignias llamativas.
+- **Onboarding y Agregar contacto:** botón sólido.
+- **Cabecera del chat:** el estado en gris.
+- `sw.js`: cache `v40`.
+
+**Cómo se probó:** capturas de tiendas, lista de chats y chat, en modo claro y oscuro.
+
+---
+
 ## 2026-10-07 — Refinamiento de interfaz (tanda 3)
 
 **Qué cambió**

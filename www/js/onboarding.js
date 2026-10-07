@@ -41,7 +41,7 @@
                 </div>
                 <button id="bbqOnbSubmit"
                     style="width:100%; padding:14px; border-radius:12px; border:none; cursor:pointer;
-                    background:linear-gradient(90deg,#f59e0b,#f97316); color:#0b141a; font-weight:900; font-size:1rem;">
+                    background:var(--bbq-accent); color:var(--bbq-accent-ink); font-weight:900; font-size:1rem;">
                     Empezar
                 </button>
                 <div id="bbqOnbError" style="color:#f87171; font-size:0.8rem; margin-top:12px; min-height:18px;"></div>

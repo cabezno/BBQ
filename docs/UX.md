@@ -68,6 +68,8 @@ Decisiones del dueño del proyecto:
 - **Fidelización:** programas tanto para tiendas como para clientes.
 - **Modelo de negocio y figura jurídica:** hay un estudio hecho, que todavía no está en el repo. Hay que sumarlo para alinear la fidelización, las comisiones y el escrow.
 
+- **Estilo visual (decidido el 2026-10-07):** sobrio, como WhatsApp. El naranja es solo acento; sin degradados ni brillos.
+
 ### Propuesta de estructura (a validar)
 
 **Pestañas (5):** Chats · Estados (con los vivos) · Tiendas (con sub-secciones Tiendas | Entregas) · Llamadas · Yo.
