@@ -292,6 +292,9 @@
                 transition:opacity .3s; opacity:0;`;
             document.body.appendChild(t);
         }
+        // Dentro de un chat, el aviso va arriba del campo de escribir (no lo tapa).
+        const conv = document.getElementById('screenConversation');
+        t.style.bottom = (conv && conv.classList.contains('active')) ? '96px' : '24px';
         t.textContent = text;
         t.style.opacity = '1';
         clearTimeout(t._h);

@@ -57,6 +57,7 @@ Para leer la agenda del teléfono y push, se compila con **Capacitor**. Ver [`CA
     ├── style.css
     ├── manifest.json / sw.js
     ├── icons/
+    ├── vendor/               # bootstrap-icons local (funciona sin conexión)
     └── js/
         ├── db.js                 # IndexedDB (DB local)
         ├── identity.js           # Identidad del dispositivo (clave no exportable)
@@ -66,6 +67,7 @@ Para leer la agenda del teléfono y push, se compila con **Capacitor**. Ver [`CA
         ├── bbq-integration.js    # Integración con la UI
         ├── e2e.js                # Cifrado de extremo a extremo (ECDH → HKDF → AES-GCM)
         ├── sanitize.js           # Escapado de datos ajenos antes de pintarlos (anti-XSS)
+        ├── ux.js                 # Pestaña Yo, Centro de privacidad, Tiendas|Entregas, pantallas vacías
         ├── bbq-flow.js · bbq-flow-runner.js · bbq-tools.js   # Motor de flujos de agentes
         ├── storage-engine.js     # Historial local
         ├── ai-orchestrator.js · escrow-engine.js · google-pay-engine.js

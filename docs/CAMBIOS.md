@@ -4,6 +4,58 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Rediseño, tanda 1: sacar el mockup, guiar y mostrar la privacidad
+
+Aplica la "Dirección acordada" de [`docs/UX.md`](UX.md).
+
+**Qué cambió**
+- **Sin mockup:**
+  - Se sacaron la barra de estado falsa ("23:50 · 5G · 100%") y el notch.
+  - Se ocultó la fila que repetía el nombre de la pestaña.
+  - Se ocultó la barra de filtros: sus chips no estaban conectados a nada.
+- **Referidos:** el popup ya no se abre al arrancar. El programa está en **Yo → Referidos**.
+- **5 pestañas:** Chats · Estados · Tiendas · Llamadas · **Yo**.
+  - La nueva pestaña "Yo" (`www/js/ux.js`) junta perfil, Mi tienda, Cobrar, Mi servicio de entrega (próximamente), Conectar IA, Automatizaciones, **Centro de privacidad**, Referidos, Comunidades y Ajustes.
+  - Comunidad deja de ser pestaña y se entra desde Yo.
+- **Tiendas | Entregas:** Tiendas tiene un segmento con un directorio de servicios de entrega (por ahora de ejemplo, con zonas y tarifas).
+  - Los chips del directorio de tiendas ahora dicen "Más visitadas" y "Para vos".
+- **Contenido de demo, sin engañar:**
+  - Las tiendas, las entregas y las comunidades llevan la marca "de ejemplo".
+  - Se borraron las 3 llamadas inventadas, también en teléfonos que ya las tenían guardadas.
+  - Se borraron las visitas inventadas del ranking de tiendas.
+- **Pantallas vacías que guían:**
+  - Chats: "Agregar contacto".
+  - Estados: "Crear estado".
+  - Llamadas: "Llamar a un contacto".
+- **Privacidad visible:**
+  - El onboarding explica en 3 puntos: mensajes cifrados, chats en tu teléfono y compras protegidas.
+  - La cabecera de cada chat cifrado muestra "🔒 Cifrado".
+  - **Centro de privacidad:** qué queda en el teléfono, qué hay en el directorio, qué no ve el servidor y qué todavía no está cifrado.
+- **Detalles del chat:**
+  - El 🔊 queda solo en los mensajes recibidos.
+  - Los mensajes a bots ya no quedan en ⏳ para siempre: los bots no mandan ACK.
+  - El aviso flotante ya no tapa el campo de escribir.
+- **Perfil:** viene completo con el nombre y el número del onboarding.
+- **Íconos locales:** `bootstrap-icons` está ahora en `www/vendor/` (MIT) y lo guarda el service worker. Ya no depende de jsDelivr, así que los íconos se ven sin conexión.
+- **Detalles visuales:**
+  - El buscador mostraba la lupa dos veces.
+  - La píldora "Conectado" estaba desalineada.
+  - La insignia "Tienda similar" se partía en dos líneas.
+- `sw.js`: cache `v36`.
+
+**Cómo se probó**
+- Capturas de todas las pantallas en tamaño de celular (390×844), en modo claro y oscuro, sin errores de JS.
+- Volvieron a pasar las pruebas de E2E, XSS, suplantación, ACK, reconexión, duplicados y guardar tienda.
+
+**Pendiente de diseño**
+- Operativa de tiendas para agentes: pedidos con estados y la bandeja "El agente propone".
+- Fidelización: sellos firmados y reseñas de compras reales.
+- Código de seguridad por QR.
+- Directorio real de tiendas y de servicios de entrega en el servidor.
+- Alinear todo con el estudio de modelo de negocio.
+
+---
+
 ## 2026-10-07 — Diagnóstico de diseño y UX
 
 - Se capturaron todas las pantallas en tamaño de celular, en modo claro y oscuro (Playwright), y se revisaron.

@@ -21,10 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMobileDetection();
     registerServiceWorker();
 
-    // Trigger Automatic Daily Referral Pop-up on launch
-    setTimeout(() => {
-        initDailyReferralPopup();
-    }, 600);
+    // (El popup de referidos ya no se abre solo: el programa vive en Yo → Referidos.)
 
     // Arrancar el sistema P2P real: identidad del dispositivo + contactos + WebRTC.
     // (Reemplaza el viejo WS-relay. La señalización P2P la maneja BBQNet.)
@@ -405,7 +402,8 @@ function selectMobileChat(chatId) {
 
     document.getElementById('mActiveName').textContent = contact.name;
     document.getElementById('mActiveAvatar').textContent = contact.avatar;
-    document.getElementById('mActiveStatus').textContent = contact.status;
+    const e2eOn = !!(window.BBQE2E && window.BBQE2E.knows(chatId));
+    document.getElementById('mActiveStatus').textContent = (e2eOn ? '🔒 Cifrado · ' : '') + (contact.status || '');
 
     renderMobileMessages();
     openMobileChatScreen();
@@ -554,7 +552,7 @@ function renderMobileMessages() {
                     <div>${escHtml(m.text)}</div>
                     ${m.payloadCard ? renderPayloadCard(m.payloadCard) : ''}
                     <div class="msg-footer-meta">
-                        ${(m.text && !m.payloadCard) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
+                        ${(m.text && !m.payloadCard && !isOutgoing) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
                         ${(!isOutgoing && m.e2e) ? '<span title="Cifrado de extremo a extremo" style="font-size:0.65rem;">🔒</span>' : ''}
                         <span class="msg-timestamp">${formatTime(m.timestamp)}</span>
                         ${isOutgoing ? (m.status === 'pending' ? '<span class="wa-tick" style="color:var(--wa-tick-gray);" title="Esperando que el contacto se conecte">⏳</span>' : '<span class="wa-tick read">✓✓</span>') : ''}
@@ -697,12 +695,14 @@ function sendMessage(textOverride = null) {
     if (activeContact && activeContact.isReal) {
         const cid = currentChatId;
         const isAgent = typeof cid === 'string' && cid.indexOf('agent_') === 0;
+        // Agentes y bots no mandan ACK: su mensaje queda "enviado" directo (sin ⏳ eterno).
+        const noAck = isAgent || cid === 'bbq_testbot' || cid === 'bbq_claude';
         const msg = {
             id: 'm_' + Date.now(),
             sender: window.MY_PEER_ID,
             text: text,
             timestamp: new Date().toISOString(),
-            status: isAgent ? 'sent' : 'pending' // humano: ⏳ hasta el ACK; agente: directo
+            status: noAck ? 'sent' : 'pending' // humano: ⏳ hasta el ACK; agente/bot: directo
         };
         window.buyerStorage.appendChatMessage(cid, msg);
         renderMobileMessages();
@@ -931,9 +931,11 @@ function compressDataURL(dataURL, maxDim = 512, quality = 0.8) {
 
 function loadProfileData() {
     const p = window.buyerStorage.getUserProfile();
+    // Nombre y número reales vienen de la identidad registrada en el onboarding.
+    const idp = (window.BBQIdentity && window.BBQIdentity.getProfile && window.BBQIdentity.getProfile()) || {};
     if (p) {
-        if (document.getElementById('profileInputName')) document.getElementById('profileInputName').value = p.name || '';
-        if (document.getElementById('profileInputPhone')) document.getElementById('profileInputPhone').value = p.phone || '';
+        if (document.getElementById('profileInputName')) document.getElementById('profileInputName').value = idp.name || p.name || '';
+        if (document.getElementById('profileInputPhone')) document.getElementById('profileInputPhone').value = idp.phone || p.phone || '';
 
         const avatarDisplay = document.getElementById('profileAvatarDisplay');
         if (avatarDisplay) {
@@ -1619,8 +1621,10 @@ function switchMobileTab(tabName) {
     const storesSection = document.getElementById('viewStoresSection');
     const callsSection = document.getElementById('viewCallsSection');
     const communitySection = document.getElementById('viewCommunitySection');
+    const meSection = document.getElementById('viewMeSection');
 
     // Hide all views
+    if (meSection) meSection.style.display = 'none';
     if (chatsSection) chatsSection.style.display = 'none';
     if (updatesSection) updatesSection.style.display = 'none';
     if (storesSection) storesSection.style.display = 'none';
@@ -1639,7 +1643,8 @@ function switchMobileTab(tabName) {
         'updates': '<i class="bi bi-circle-square"></i> Estados',
         'stores': '<i class="bi bi-shop"></i> Tiendas P2P',
         'community': '<i class="bi bi-people-fill"></i> Comunidad',
-        'profile': '<i class="bi bi-person-circle"></i> Perfil'
+        'profile': '<i class="bi bi-person-circle"></i> Perfil',
+        'me': '<i class="bi bi-person-circle"></i> Yo'
     };
     if (selectedTabBadge && badges[tabName]) {
         selectedTabBadge.innerHTML = badges[tabName];
@@ -1661,6 +1666,9 @@ function switchMobileTab(tabName) {
     } else if (tabName === 'community') {
         if (communitySection) communitySection.style.display = 'block';
         renderCommunitySection();
+    } else if (tabName === 'me') {
+        if (meSection) meSection.style.display = 'block';
+        if (window.BBQUX) window.BBQUX.renderMe();
     }
 
     updateFabIcon(tabName);
@@ -2304,6 +2312,8 @@ function updateFabIcon(tabName) {
     };
 
     fab.innerHTML = icons[tabName] || '<i class="bi bi-plus-lg"></i>';
+    // En "Yo" no hay acción flotante: todo está en la lista.
+    fab.style.display = (tabName === 'me' || tabName === 'community') ? 'none' : '';
 }
 
 function renderContactPicker(mode = 'chat') {
