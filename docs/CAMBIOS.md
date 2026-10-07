@@ -4,6 +4,17 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Públicos y plataformas (decisión)
+
+- **Decisión:** llegar a todos los públicos a la vez (usuarios, tiendas, servicios de entrega y quien busca privacidad), en celular y en compu.
+- **Hoja de ruta en [`docs/PLATAFORMAS.md`](PLATAFORMAS.md):**
+  - un solo código con tres envases: PWA, Capacitor y Tauri;
+  - cimientos comunes: interfaz según el rol, dispositivos vinculados, layout de escritorio, llamadas y audios robustos, celulares modestos;
+  - después, el trabajo por rol.
+- No se cambió código.
+
+---
+
 ## 2026-10-07 — Estilo sobrio tipo WhatsApp (tanda 4)
 
 **Decisión del dueño:** la app tiene que sentirse como WhatsApp para que el usuario se adapte rápido. El naranja queda solo como acento. Quedó registrado en `CLAUDE.md` y en `docs/UX.md`.

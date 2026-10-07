@@ -83,6 +83,10 @@ Para leer la agenda del teléfono y push, se compila con **Capacitor**. Ver [`CA
 - Servidor: Node + Express + WebSocket (`ws`)
 - Nativo: Capacitor (Android/iOS) + plugins Contacts/Share/Push
 
+## 🧭 Públicos y plataformas
+
+Un solo código para usuarios, tiendas, servicios de entrega y quien busca privacidad, en celular y en compu (PWA, Capacitor y Tauri). Ver [`docs/PLATAFORMAS.md`](docs/PLATAFORMAS.md).
+
 ## 📜 Cambios
 
 Ver [`docs/CAMBIOS.md`](docs/CAMBIOS.md): qué se cambió, cómo se probó y qué falta.
