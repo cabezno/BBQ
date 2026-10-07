@@ -4,6 +4,29 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Actualizaciones OTA: aviso de versión nueva
+
+**Qué cambió**
+- `app.js`: la app busca una versión nueva al volver a primer plano y cada 30 minutos. Cuando el service worker nuevo toma el control, muestra "Hay una versión nueva de BBQ · Actualizar". No recarga sola. Antes, una app abierta seguía con la versión vieja hasta cerrarla del todo.
+- `sw.js`: el precache baja los archivos con `cache: 'reload'`, para no guardar una versión vieja que haya quedado en la caché HTTP del navegador. Cache `v43`.
+- `style.css`: estilo sobrio del aviso, por encima del onboarding.
+- `docs/PLATAFORMAS.md`: nueva sección "Actualizaciones OTA" con el estado y las opciones para la PWA, Capacitor y Tauri, sus límites y el tema de firmar los bundles.
+
+**Cómo se probó** (Playwright, contra una copia del server)
+- Con la app abierta, se cambió la versión del service worker y se forzó la búsqueda de actualización:
+  - aparece el aviso;
+  - queda solo la cache nueva;
+  - al tocar "Actualizar" recarga y el aviso desaparece;
+  - sin errores.
+- Primera prueba fallida: el aviso quedaba debajo del onboarding (z-index). Corregido.
+
+**Pendiente**
+- **OTA en Capacitor:** live update con bundle firmado.
+- **Tauri:** el updater.
+- **Firmado del código servido**, para que el server no pueda cambiar el JS sin que se note.
+
+---
+
 ## 2026-10-07 — Decisión: disputas entre las partes, BBQ se deslinda
 
 **Qué cambió (solo docs)**

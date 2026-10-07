@@ -33,11 +33,31 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ==========================================================================
    0. SERVICE WORKER REGISTRATION & PWA INSTALL
    ========================================================================== */
+function showUpdateBanner() {
+    if (document.getElementById('bbqUpdateBanner')) return;
+    const b = document.createElement('div');
+    b.id = 'bbqUpdateBanner';
+    b.className = 'bbq-update-banner';
+    b.innerHTML = '<span>Hay una versión nueva de BBQ</span><button type="button">Actualizar</button>';
+    b.querySelector('button').onclick = () => location.reload();
+    document.body.appendChild(b);
+}
+
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
+        // Actualización OTA: si había una versión anterior controlando la página, el SW nuevo
+        // toma el control (skipWaiting + claim) y se ofrece recargar, sin cortar lo que el usuario está haciendo.
+        const hadController = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (hadController) showUpdateBanner();
+        });
         navigator.serviceWorker.register('/sw.js')
             .then(reg => {
                 console.log('[PWA] Service Worker registrado:', reg.scope);
+                // Buscar versión nueva al volver a la app y cada 30 min si queda abierta.
+                const check = () => reg.update().catch(() => {});
+                document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+                setInterval(check, 30 * 60 * 1000);
             })
             .catch(err => {
                 console.warn('[PWA] Service Worker no registrado:', err);

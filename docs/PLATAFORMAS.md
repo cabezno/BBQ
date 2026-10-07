@@ -21,6 +21,24 @@
 | **Capacitor** | Android e iOS | Configurado (`capacitor.config.json`), sin build | Android Studio; Mac + Xcode + Apple Developer para iOS. Falta CORS y `BBQ_SERVER` (ver CAMBIOS) |
 | **Tauri** | Mac, Windows y Linux | Por hacer | Rust toolchain; firma y notarización de Apple para Mac; los builds se pueden hacer en GitHub Actions |
 
+## Actualizaciones OTA (sin pasar por las tiendas)
+
+| Envase | ¿OTA? | Cómo |
+|---|---|---|
+| **PWA** | ✅ Ya funciona | Cada deploy en Render sube `CACHE_NAME` en `sw.js`. La app busca versión nueva al volver a primer plano y cada 30 min, el service worker nuevo toma el control y aparece "Hay una versión nueva · Actualizar" (no recarga sola, para no cortar una llamada o un mensaje a medio escribir). |
+| **Capacitor (Android/iOS)** | Posible, falta armarlo | Hoy `www/` va empaquetado dentro del APK/IPA: sin OTA, cada cambio requiere publicar en las tiendas. Opciones abajo. |
+| **Tauri (escritorio)** | Posible | `tauri-plugin-updater`: descarga el binario nuevo firmado desde una URL propia (GitHub Releases o el server). |
+
+**Opciones para Capacitor**
+1. **Live update con bundle firmado (recomendada):** plugin `@capgo/capacitor-updater` (código abierto) en modo autoalojado. El server publica `www.zip` con su versión y firma; la app lo baja, verifica y lo aplica en el próximo arranque, con vuelta atrás si falla. Funciona sin conexión con la última versión bajada.
+2. **`server.url` apuntando a Render:** la app nativa es un marco que carga la web en vivo. Es lo más simple, pero sin conexión no abre y Apple puede rechazarla por ser "solo una web".
+
+**Límites:**
+- Por OTA solo se puede cambiar HTML/CSS/JS. Un plugin nativo nuevo (cámara, push, contactos) o un cambio de permisos sigue necesitando versión en la tienda.
+- Apple y Google lo permiten mientras no cambie el propósito de la app.
+
+**Privacidad:** quien sirve el código puede cambiarlo. Con E2E eso importa: un JS adulterado podría leer los mensajes antes de cifrarlos. Por eso los bundles OTA deberían ir **firmados con una clave que no esté en el server** (la del dueño, offline), y la app solo aplicar los que verifiquen. La PWA hoy no tiene esa protección: confía en lo que sirva Render.
+
 ## Cimientos (sirven a todos los públicos)
 
 1. ✅ **La interfaz se adapta al rol**, y cualquiera puede activar "Vender" o "Hacer entregas" desde Yo → Modos. "Yo" muestra herramientas de vendedor o de repartidor solo a quien tiene tienda o servicio; el resto ve chats y compras.

@@ -3,7 +3,7 @@
  * Cache-first strategy for static assets, network-first for API/WS
  */
 
-const CACHE_NAME = 'bbq-pwa-v42';
+const CACHE_NAME = 'bbq-pwa-v43';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -57,7 +57,8 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             // Cache local assets (these must succeed)
-            return cache.addAll(STATIC_ASSETS).then(() => {
+            // cache: 'reload' evita que el precache tome archivos viejos de la caché HTTP del navegador.
+            return cache.addAll(STATIC_ASSETS.map(u => new Request(u, { cache: 'reload' }))).then(() => {
                 // Try to cache external assets but don't fail if offline
                 return Promise.allSettled(
                     EXTERNAL_ASSETS.map(url => 
