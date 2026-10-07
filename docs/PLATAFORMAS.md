@@ -28,8 +28,8 @@
    - **Vincular:** el teléfono firma una autorización para la clave del nuevo dispositivo, verificable sin servidor.
    - **Cifrado:** E2E con un sobre por dispositivo; el emisor cifra para todos los dispositivos del destinatario.
    - **Historial:** se pasa por P2P entre tus dispositivos.
-3. **Layout de escritorio.** En pantallas anchas: lista + chat + panel (pedidos, catálogo o agente), como WhatsApp Web.
-4. **Llamadas y audios robustos:**
+3. **Layout de escritorio.** En pantallas anchas: lista + chat + panel (pedidos, catálogo o agente), como WhatsApp Web. Hoy la app se ve dentro de un "marco de teléfono" con una barra de simulación de roles, que hay que reemplazar.
+4. ✅ **Llamadas y audios robustos** (falta verificar la llamada con el código de seguridad):
    - historial de llamadas;
    - que no se pierdan los candidatos ICE;
    - timeout si nadie atiende;

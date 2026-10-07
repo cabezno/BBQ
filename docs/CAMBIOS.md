@@ -4,6 +4,41 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Llamadas y audios robustos
+
+**Qué cambió**
+- **Las llamadas ya no pierden la conexión al empezar** (`call-engine.js`):
+  - Los candidatos ICE que llegan antes de la descripción remota se guardan y se aplican después. Antes se descartaban mientras el otro estaba en "llamada entrante", y muchas llamadas no conectaban.
+  - Las señales de otro peer distinto al de la llamada en curso se ignoran.
+- **Timbre con límite de 45 segundos:**
+  - quien llama ve "Sin respuesta" y se corta;
+  - a quien no atendió le queda como **perdida**, con el aviso "📞 Llamada perdida de…".
+- **Historial de llamadas real:** cada llamada se registra como saliente, entrante, perdida o rechazada, con duración y si fue con video. Antes el motor no registraba nada y la pestaña Llamadas siempre estaba vacía.
+- **TURN configurable:**
+  - Nuevo endpoint `GET /api/ice-servers`, que devuelve STUN y, si está configurado, TURN.
+  - Se configura con `TURN_URLS` más `TURN_SECRET` (credenciales efímeras de coturn, válidas 24 h) o con `TURN_USERNAME`/`TURN_CREDENTIAL`.
+  - Lo usan las llamadas y el chat P2P (`BBQNet.iceServers()`).
+  - `render.yaml` ya trae los lugares para cargar `TURN_*` y `UPSTASH_*`.
+- **Notas de voz y adjuntos por el outbox:** quedan ⏳ hasta el ACK y, si el contacto está desconectado, se entregan cuando vuelve. Antes se perdían. El límite de adjuntos sube a unos 4 MB.
+- `sw.js`: cache `v42`.
+
+**Cómo se probó** (Playwright, 2 usuarios, cámara y micrófono simulados)
+
+| Prueba | Resultado |
+|---|---|
+| Videollamada atendida | conexión `connected` en los dos, media remota recibida, corte limpio; historial "entrante · video · 0:06" y "saliente" |
+| Llamada rechazada | historial "Rechazada" |
+| Llamada sin atender | a los 45 s se corta en los dos; historial "Perdida" y aviso |
+| `/api/ice-servers` con `TURN_URLS` y `TURN_SECRET` | devuelve STUN más TURN con credencial efímera |
+| Foto a un contacto desconectado | queda en el outbox; al volver le llega cifrada (🔒) y el outbox se vacía con el ACK |
+| Regresiones (E2E, confiabilidad, XSS, comercio) | pasan |
+
+**Pendiente**
+- **Verificar la llamada con el código de seguridad:** atar el fingerprint DTLS a la identidad, para que un server malicioso no pueda meterse en la señalización.
+- **Escritorio:** en pantallas anchas la app se muestra dentro de un "marco de teléfono" con una barra de simulación de roles. Para el público de escritorio hay que reemplazarlo por el layout tipo WhatsApp Web (ver `docs/PLATAFORMAS.md`).
+
+---
+
 ## 2026-10-07 — La interfaz se adapta al rol, con modos siempre activables
 
 **Decisión del dueño:** la interfaz se adapta al rol de cada uno, pero **cualquiera puede activar cualquier rol cuando quiera**.
