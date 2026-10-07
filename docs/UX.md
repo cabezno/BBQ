@@ -53,3 +53,41 @@ Lo que hace distinta a BBQ casi no aparece en la interfaz: P2P, servidor mínimo
 - **Identidad:** ¿la app tiene que parecerse a WhatsApp (familiar, sin aprendizaje) o tener una identidad propia más marcada?
 - **Lugar del comercio:** ¿pestaña aparte (Tiendas) o integrado en los chats (una tienda es un contacto con catálogo)?
 - **Contenido de demo:** ¿se saca del todo o se muestra marcado como "ejemplo"?
+
+---
+
+## Dirección acordada (2026-10-07)
+
+Decisiones del dueño del proyecto:
+
+- **Chat:** igual a WhatsApp, familiar y sin curva de aprendizaje.
+- **Tiendas y servicios de entrega:** siguen funcionando como hoy, como directorios propios (pestaña Tiendas), no solo como contactos.
+- **Referidos:** el programa pasa a Configuración. No más popup al arrancar.
+- **Seguridad y privacidad:** destacarlas en la interfaz.
+- **Operativa de tiendas:** mejorarla con funciones preparadas para que las use un agente (IA o reglas).
+- **Fidelización:** programas tanto para tiendas como para clientes.
+- **Modelo de negocio y figura jurídica:** hay un estudio hecho, que todavía no está en el repo. Hay que sumarlo para alinear la fidelización, las comisiones y el escrow.
+
+### Propuesta de estructura (a validar)
+
+**Pestañas (5):** Chats · Estados (con los vivos) · Tiendas (con sub-secciones Tiendas | Entregas) · Llamadas · Yo.
+"Yo" junta el perfil, Mi tienda / Mi servicio de entrega, IA, Privacidad, Referidos y Ajustes.
+
+**Seguridad y privacidad visibles:**
+- Una pantalla del onboarding que explique en 3 puntos qué ve y qué no ve el servidor.
+- 🔒 en la cabecera de cada chat cifrado.
+- "Código de seguridad" para verificar un contacto en persona (QR).
+- "Centro de privacidad" en Yo: qué datos hay en el teléfono, qué hay en el directorio, cómo exportar o borrar.
+- En una compra: "🛡️ Compra protegida: el pago se libera cuando recibís".
+
+**Operativa de tiendas, pensada para agentes.** Todo como herramientas de `BBQTools`; las sensibles requieren confirmación.
+- **Catálogo:** variantes, stock, precios y fotos.
+- **Pedidos:** estados nuevo → confirmado → preparando → enviado → entregado, más cancelado.
+- **Datos de la tienda:** horarios, zonas y costos de envío, respuestas rápidas.
+- **Bandeja "El agente propone":** el dueño confirma o rechaza con un toque. Hoy falta esta UI.
+- **Configuración del agente:** tono, qué puede hacer solo y qué requiere confirmación, horarios de atención.
+- **Servicios de entrega:** pedidos asignados, escaneo del QR del escrow, tarifas y zonas.
+
+**Fidelización, compatible con el P2P (sin base central):**
+- **Clientes:** tarjeta de sellos o puntos por tienda, firmados por la tienda y guardados en el teléfono del cliente. Se pueden verificar sin servidor. Más cupones y beneficios por recompra.
+- **Tiendas y entregas:** reputación con reseñas firmadas por compradores que pasaron por un escrow real (no se pueden inventar), insignias por cumplimiento y tiempos de respuesta. Los beneficios concretos dependen del modelo de negocio.

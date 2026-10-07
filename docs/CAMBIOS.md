@@ -12,6 +12,15 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
   - 8 grupos de problemas por impacto (mockup y demo, popup de referidos, pantallas vacías, exceso de pestañas, detalles del chat, perfil, íconos externos, valor diferencial invisible);
   - preguntas abiertas de diseño.
 - No se cambió código todavía.
+- Se agregó en `docs/UX.md` la dirección acordada con el dueño:
+  - chat como WhatsApp;
+  - Tiendas y Entregas como directorios propios;
+  - referidos dentro de Configuración;
+  - seguridad y privacidad visibles;
+  - operativa de tiendas para agentes;
+  - fidelización P2P.
+
+  Queda pendiente sumar el estudio de modelo de negocio y figura jurídica.
 
 ---
 
