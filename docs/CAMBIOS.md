@@ -4,6 +4,17 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-07 — Diagnóstico de diseño y UX
+
+- Se capturaron todas las pantallas en tamaño de celular, en modo claro y oscuro (Playwright), y se revisaron.
+- El resultado está en [`docs/UX.md`](UX.md):
+  - lo que está bien;
+  - 8 grupos de problemas por impacto (mockup y demo, popup de referidos, pantallas vacías, exceso de pestañas, detalles del chat, perfil, íconos externos, valor diferencial invisible);
+  - preguntas abiertas de diseño.
+- No se cambió código todavía.
+
+---
+
 ## 2026-10-06 — Revisión a fondo + seguridad, confiabilidad, E2E y agente sin IA
 
 Rama: `claude/rc-51vifu`.
