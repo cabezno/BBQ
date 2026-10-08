@@ -4,6 +4,12 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-08 — Nota para retomar en otra sesión
+- **Qué:** `docs/RETOMAR.md` con el estado de la rama y del PR, lo último hecho, ideas en exploración y próximos pasos posibles.
+- **Por qué:** el dueño sigue desde una sesión de escritorio que no tiene el contexto de esta conversación.
+- **Cómo se probó:** solo documentación; no cambia código.
+- **Pendiente:** actualizar la nota al cerrar cada tanda.
+
 ## 2026-10-07 — Actualizaciones OTA: aviso de versión nueva
 
 **Qué cambió**
