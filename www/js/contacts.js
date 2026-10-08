@@ -49,7 +49,9 @@
                     peerId: u.peerId,
                     phone: u.phone,
                     name: fallbackName || u.name || u.phone,
-                    publicKey: u.publicKey
+                    publicKey: u.publicKey,
+                    signPublicKey: u.signPublicKey,
+                    ecdhSig: u.ecdhSig
                 };
                 await this.save(contact);
                 return { ok: true, contact };
@@ -76,7 +78,9 @@
                     const contact = {
                         peerId: m.peerId, phone: m.phone,
                         name: (mine && mine.name) || m.name || m.phone,
-                        publicKey: m.publicKey
+                        publicKey: m.publicKey,
+                        signPublicKey: m.signPublicKey,
+                        ecdhSig: m.ecdhSig
                     };
                     await this.save(contact);
                     added.push(contact);

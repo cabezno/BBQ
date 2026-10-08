@@ -3,14 +3,16 @@
  * Cache-first strategy for static assets, network-first for API/WS
  */
 
-const CACHE_NAME = 'bbq-pwa-v31';
+const CACHE_NAME = 'bbq-pwa-v43';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
     '/style.css',
     '/manifest.json',
+    '/js/sanitize.js',
     '/js/db.js',
     '/js/identity.js',
+    '/js/e2e.js',
     '/js/storage-engine.js',
     '/js/p2p-node.js',
     '/js/webrtc-node.js',
@@ -32,6 +34,13 @@ const STATIC_ASSETS = [
     '/js/onboarding.js',
     '/js/app.js',
     '/js/bbq-integration.js',
+    '/js/ux.js',
+    '/js/ux-commerce.js',
+    '/js/listings.js',
+    '/js/orders.js',
+    '/js/loyalty.js',
+    '/vendor/bootstrap-icons/bootstrap-icons.min.css',
+    '/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2',
     '/icons/icon-192.svg',
     '/icons/icon-512.svg'
 ];
@@ -48,7 +57,8 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             // Cache local assets (these must succeed)
-            return cache.addAll(STATIC_ASSETS).then(() => {
+            // cache: 'reload' evita que el precache tome archivos viejos de la caché HTTP del navegador.
+            return cache.addAll(STATIC_ASSETS.map(u => new Request(u, { cache: 'reload' }))).then(() => {
                 // Try to cache external assets but don't fail if offline
                 return Promise.allSettled(
                     EXTERNAL_ASSETS.map(url => 
@@ -122,7 +132,7 @@ self.addEventListener('fetch', (event) => {
                 })
                 .catch(() => {
                     // Offline: serve from cache
-                    return caches.match(event.request) || caches.match('/index.html');
+                    return caches.match(event.request).then(r => r || caches.match('/index.html'));
                 })
         );
         return;

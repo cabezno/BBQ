@@ -16,6 +16,15 @@
     ];
 
     const BBQNet = {
+        _ice: null, // servidores STUN/TURN que da el server (/api/ice-servers); si no, los de arriba
+        iceServers() { return this._ice || ICE_SERVERS; },
+        async loadIceServers() {
+            try {
+                const r = await fetch(`${window.BBQ_SERVER || location.origin}/api/ice-servers`);
+                const j = await r.json();
+                if (j && Array.isArray(j.iceServers) && j.iceServers.length) this._ice = j.iceServers;
+            } catch (e) {}
+        },
         peerId: null,
         ws: null,
         wsReady: false,
@@ -29,6 +38,7 @@
         // ── Init: conecta la señalización y se anuncia ──
         init(peerId) {
             this.peerId = peerId;
+            this.loadIceServers();
             this._connectSignaling();
             // Al volver a primer plano, reconectar de una si el socket murió.
             if (!this._visHooked && typeof document !== 'undefined') {
@@ -59,40 +69,69 @@
             if (this.ws && this.wsReady) this.ws.send(JSON.stringify({ type: 'CHAT_ACK', to, from: this.peerId, id: msgId }));
         },
 
-        _emitMessage(fromPeerId, msg) { this.msgListeners.forEach(fn => fn(fromPeerId, msg)); },
+        // Entrada única de payloads (P2P o relay): descifra los sobres E2E. Si ya tengo las claves
+        // verificadas de ese peer, NO acepto nada en claro (nadie en el medio puede inyectar texto).
+        async _emitMessage(fromPeerId, msg) {
+            const E = window.BBQE2E;
+            if (msg && msg.type === 'e2e') {
+                const plain = E ? await E.decrypt(fromPeerId, msg) : null;
+                if (!plain || typeof plain !== 'object') { this._log('Sobre E2E inválido de ' + fromPeerId); return; }
+                plain._e2e = true;
+                msg = plain;
+            } else if (E && await E.canEncrypt(fromPeerId)) {
+                this._log('Descartado mensaje en claro de ' + fromPeerId + ' (se esperaba cifrado)');
+                return;
+            }
+            this.msgListeners.forEach(fn => fn(fromPeerId, msg));
+        },
         _emitState(peerId, state) { this.stateListeners.forEach(fn => fn(peerId, state)); },
         _emitPresence(peerId, online) { this.presenceListeners.forEach(fn => fn(peerId, online)); },
         _emitAck(fromPeerId, msgId) { this.ackListeners.forEach(fn => fn(fromPeerId, msgId)); },
         _emitReady() { this.readyListeners.forEach(fn => { try { fn(); } catch (e) {} }); },
 
         // ── Señalización (WebSocket con el server mínimo) ──
-        _connectSignaling() {
+        // Un solo socket vivo a la vez: si ya hay uno abierto/conectando, no abre otro
+        // (salvo `force`, cuando el actual quedó zombie). Los eventos de sockets viejos se ignoran.
+        _connectSignaling(force) {
+            if (!force && this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+            if (this._reconnectTimer) { clearTimeout(this._reconnectTimer); this._reconnectTimer = null; }
+            const old = this.ws;
+            if (old) {
+                old.onopen = old.onmessage = old.onclose = old.onerror = null;
+                try { old.close(); } catch (e) {}
+            }
+            this.wsReady = false;
+
             const base = window.BBQ_SERVER || location.origin;
             const wsUrl = base.replace(/^http/, 'ws') + '/ws';
+            let ws;
             try {
-                this.ws = new WebSocket(wsUrl);
+                ws = new WebSocket(wsUrl);
             } catch (e) {
+                this.ws = null;
                 this._scheduleReconnect();
                 return;
             }
+            this.ws = ws;
 
-            this.ws.onopen = () => {
+            ws.onopen = () => {
                 this._reconnectDelay = 1000;
                 // HELLO con la clave pública de firma → el server responde con un reto (CHALLENGE).
                 // wsReady se activa recién al autenticar (HELLO-ACK), no acá.
                 const signPublicKey = (window.BBQIdentity && window.BBQIdentity.getSignPublicKeyB64 && window.BBQIdentity.getSignPublicKeyB64()) || '';
-                this.ws.send(JSON.stringify({ type: 'HELLO', peerId: this.peerId, signPublicKey }));
+                ws.send(JSON.stringify({ type: 'HELLO', peerId: this.peerId, signPublicKey }));
                 this._log('Señalización conectada (autenticando…)');
                 this._startHeartbeat();
             };
 
-            this.ws.onmessage = async (ev) => {
+            ws.onmessage = async (ev) => {
+                if (this.ws !== ws) return;
                 let m; try { m = JSON.parse(ev.data); } catch { return; }
                 // Reto de autenticación: firmamos el nonce con la clave del dispositivo.
                 if (m.type === 'CHALLENGE') {
                     try {
                         const sig = await window.BBQIdentity.sign(m.nonce);
-                        this.ws.send(JSON.stringify({ type: 'AUTH', sig }));
+                        if (this.ws === ws) ws.send(JSON.stringify({ type: 'AUTH', sig }));
                     } catch (e) { this._log('Error firmando el reto: ' + e.message); }
                     return;
                 }
@@ -108,13 +147,14 @@
                 if (m.type === 'CHAT_RELAY' && m.payload) { this._emitMessage(m.from, m.payload); return; }
             };
 
-            this.ws.onclose = () => {
+            ws.onclose = () => {
+                if (this.ws !== ws) return;
                 this.wsReady = false;
                 this._stopHeartbeat();
                 this._updateConnUI('offline');
                 this._scheduleReconnect();
             };
-            this.ws.onerror = () => { this._updateConnUI('offline'); };
+            ws.onerror = () => { if (this.ws === ws) this._updateConnUI('offline'); };
         },
 
         // Mantiene vivo el socket (redes móviles cortan sockets ociosos) y reconecta
@@ -128,11 +168,9 @@
                 this._pongWatch = setTimeout(() => {
                     if (!this._gotPong) {
                         this._log('Sin PONG → reconectando');
-                        try { this.ws && this.ws.close(); } catch (e) {}
-                        this.wsReady = false;
                         this._stopHeartbeat();
                         this._updateConnUI('connecting');
-                        this._connectSignaling();
+                        this._connectSignaling(true);
                     }
                 }, 8000);
             }, 12000);
@@ -144,7 +182,8 @@
 
         _scheduleReconnect() {
             this._updateConnUI('connecting');
-            setTimeout(() => this._connectSignaling(), this._reconnectDelay);
+            if (this._reconnectTimer) return;
+            this._reconnectTimer = setTimeout(() => { this._reconnectTimer = null; this._connectSignaling(); }, this._reconnectDelay);
             this._reconnectDelay = Math.min(this._reconnectDelay * 1.5, 20000);
         },
 
@@ -159,7 +198,7 @@
             let entry = this.peers.get(peerId);
             if (entry) return entry;
 
-            const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+            const pc = new RTCPeerConnection({ iceServers: this.iceServers() });
             entry = { pc, channel: null, ready: false };
             this.peers.set(peerId, entry);
 
@@ -237,16 +276,22 @@
 
         // ── Enviar un objeto JSON a un peer (lo conecta si hace falta) ──
         async send(peerId, obj) {
+            // 0) Cifrar E2E si tengo las claves verificadas del destinatario (bots/agentes: en claro).
+            let wire = obj;
+            if (window.BBQE2E) {
+                try { wire = (await window.BBQE2E.encrypt(peerId, obj)) || obj; }
+                catch (e) { this._log('No se pudo cifrar para ' + peerId + ': ' + e.message); return { ok: false, error: 'Error de cifrado' }; }
+            }
             // 1) Si ya hay canal P2P directo, mandarlo por ahí.
             const entry = this.peers.get(peerId);
             if (entry && entry.ready && entry.channel) {
-                try { entry.channel.send(JSON.stringify(obj)); return { ok: true, via: 'p2p' }; } catch (e) {}
+                try { entry.channel.send(JSON.stringify(wire)); return { ok: true, via: 'p2p', e2e: wire !== obj }; } catch (e) {}
             }
             // 2) Si no, mandar YA por relay WS (instantáneo) y abrir P2P en segundo plano.
             this.connect(peerId).catch(() => {});
             if (this.ws && this.wsReady) {
-                this.ws.send(JSON.stringify({ type: 'CHAT_RELAY', to: peerId, from: this.peerId, payload: obj }));
-                return { ok: true, via: 'relay' };
+                this.ws.send(JSON.stringify({ type: 'CHAT_RELAY', to: peerId, from: this.peerId, payload: wire }));
+                return { ok: true, via: 'relay', e2e: wire !== obj };
             }
             return { ok: false, error: 'Sin conexión' };
         },

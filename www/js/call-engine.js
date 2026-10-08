@@ -4,7 +4,14 @@
  * Llamada bidireccional directa entre dos peers. La señalización (offer/answer/ICE)
  * viaja por BBQNet con data.ns='call'. El audio/video va directo teléfono↔teléfono.
  * Requiere que ambos estén online (sin buzón, igual que el chat).
+ *
+ * - Los candidatos ICE que llegan antes de tener la descripción remota se guardan y se
+ *   aplican después (antes se descartaban y muchas llamadas no conectaban).
+ * - Timbre con límite: si nadie atiende en RING_MS se corta y queda como "perdida"/"sin respuesta".
+ * - Cada llamada queda en el historial (Llamadas): saliente, entrante o perdida, con duración.
+ * - Servidores STUN/TURN: los da el server (/api/ice-servers) para redes que no conectan directo.
  */
+const RING_MS = 45000;
 class CallEngine {
     constructor() {
         this.pc = null;
@@ -16,10 +23,9 @@ class CallEngine {
         this.pendingOffer = null;
         this.timerInt = null;
         this.seconds = 0;
-        this.iceServers = [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ];
+        this.pendingIce = [];     // candidatos que llegaron antes de la descripción remota
+        this.ringTimer = null;
+        this.log = null;          // { contactId, direction:'out'|'in', video, startedAt, answeredAt }
         this._initSignaling();
     }
 
@@ -48,6 +54,7 @@ class CallEngine {
         this.peerId = peerId;
         this.withVideo = withVideo;
         this.state = 'calling';
+        this.log = { contactId: peerId, direction: 'out', video: !!withVideo, startedAt: Date.now(), answeredAt: null };
         try {
             this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo ? { facingMode: 'user' } : false });
         } catch (e) {
@@ -62,10 +69,21 @@ class CallEngine {
         await this.pc.setLocalDescription(offer);
         const me = (window.BBQIdentity && window.BBQIdentity.getProfile && window.BBQIdentity.getProfile()) || {};
         window.BBQNet.sendSignal(peerId, { ns: 'call', kind: 'offer', sdp: this.pc.localDescription, withVideo, caller: me.name || '' });
+        // Si no atiende en RING_MS, se corta (queda "sin respuesta" en el historial).
+        this.ringTimer = setTimeout(() => {
+            if (this.state === 'calling') { if (window.bbqToast) window.bbqToast('Sin respuesta'); this.endCall(); }
+        }, RING_MS);
+    }
+
+    // Aplica los candidatos ICE guardados una vez que hay descripción remota.
+    async _flushIce() {
+        if (!this.pc || !this.pc.remoteDescription) return;
+        const list = this.pendingIce; this.pendingIce = [];
+        for (const c of list) { try { await this.pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {} }
     }
 
     _newPc() {
-        this.pc = new RTCPeerConnection({ iceServers: this.iceServers });
+        this.pc = new RTCPeerConnection({ iceServers: (window.BBQNet && window.BBQNet.iceServers && window.BBQNet.iceServers()) || [{ urls: 'stun:stun.l.google.com:19302' }] });
         this.pc.onicecandidate = (e) => {
             if (e.candidate) window.BBQNet.sendSignal(this.peerId, { ns: 'call', kind: 'ice', candidate: e.candidate });
         };
@@ -95,17 +113,33 @@ class CallEngine {
                 this.withVideo = !!data.withVideo;
                 this.state = 'incoming';
                 this.pendingOffer = data.sdp;
+                this.pendingIce = [];
+                this.log = { contactId: from, direction: 'in', video: !!data.withVideo, startedAt: Date.now(), answeredAt: null };
                 this._buildUI('incoming', data.caller);
+                // Si no atiendo en RING_MS, deja de sonar (queda "perdida").
+                this.ringTimer = setTimeout(() => {
+                    if (this.state !== 'incoming') return;
+                    window.BBQNet.sendSignal(this.peerId, { ns: 'call', kind: 'reject' });
+                    this._reset(); // sin "declined": queda como perdida
+                }, RING_MS);
             } else if (data.kind === 'answer') {
+                if (from !== this.peerId || this.state !== 'calling') return;
                 if (this.pc) await this.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                await this._flushIce();
                 this._setActive();
             } else if (data.kind === 'ice') {
-                if (this.pc) { try { await this.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {} }
+                if (from !== this.peerId) return;
+                // Sin pc o sin descripción remota todavía: guardar para después (antes se perdían).
+                if (this.pc && this.pc.remoteDescription) { try { await this.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {} }
+                else if (this.pendingIce.length < 100) this.pendingIce.push(data.candidate);
             } else if (data.kind === 'reject') {
+                if (from !== this.peerId) return;
                 if (window.bbqToast) window.bbqToast('Llamada rechazada'); this._reset();
             } else if (data.kind === 'busy') {
+                if (from !== this.peerId) return;
                 if (window.bbqToast) window.bbqToast('Contacto ocupado'); this._reset();
             } else if (data.kind === 'end') {
+                if (from !== this.peerId) return;
                 this.endCall(true);
             }
         } catch (e) { console.warn('[CALL] señal:', e); }
@@ -119,6 +153,7 @@ class CallEngine {
         this._newPc();
         this.localStream.getTracks().forEach(t => this.pc.addTrack(t, this.localStream));
         await this.pc.setRemoteDescription(new RTCSessionDescription(this.pendingOffer));
+        await this._flushIce();
         const answer = await this.pc.createAnswer();
         await this.pc.setLocalDescription(answer);
         window.BBQNet.sendSignal(this.peerId, { ns: 'call', kind: 'answer', sdp: this.pc.localDescription });
@@ -126,6 +161,7 @@ class CallEngine {
     }
 
     reject() {
+        if (this.log && this.state === 'incoming') this.log.declined = true;
         if (this.peerId) window.BBQNet.sendSignal(this.peerId, { ns: 'call', kind: 'reject' });
         this._reset();
     }
@@ -147,6 +183,8 @@ class CallEngine {
 
     _setActive() {
         this.state = 'active';
+        if (this.ringTimer) { clearTimeout(this.ringTimer); this.ringTimer = null; }
+        if (this.log) this.log.answeredAt = Date.now();
         this._buildUI('active');
         this._attachRemote();
         if (this.withVideo && this.localStream) {
@@ -162,7 +200,27 @@ class CallEngine {
         }, 1000);
     }
 
+    // Guarda la llamada en el historial (pestaña Llamadas).
+    _saveLog() {
+        const l = this.log; this.log = null;
+        if (!l || !window.buyerStorage || !window.buyerStorage.addCall) return;
+        const c = (typeof CONTACTS_DATA !== 'undefined' && CONTACTS_DATA[l.contactId]) || {};
+        const type = l.direction === 'out' ? 'outgoing' : (l.answeredAt ? 'incoming' : (l.declined ? 'declined' : 'missed'));
+        window.buyerStorage.addCall({
+            id: 'call_' + l.startedAt + '_' + Math.random().toString(36).slice(2, 6),
+            contactId: l.contactId, contactName: c.name || 'Contacto',
+            type, video: l.video, answered: !!l.answeredAt,
+            duration: l.answeredAt ? Math.round((Date.now() - l.answeredAt) / 1000) : 0,
+            timestamp: new Date(l.startedAt).toISOString()
+        });
+        if (typeof currentActiveTab !== 'undefined' && currentActiveTab === 'calls' && typeof renderCallsSection === 'function') renderCallsSection();
+        if (type === 'missed' && window.bbqToast) window.bbqToast('📞 Llamada perdida de ' + (c.name || 'un contacto'));
+    }
+
     _reset() {
+        this._saveLog();
+        if (this.ringTimer) { clearTimeout(this.ringTimer); this.ringTimer = null; }
+        this.pendingIce = [];
         if (this.timerInt) clearInterval(this.timerInt);
         this.timerInt = null;
         if (this.pc) { try { this.pc.close(); } catch (e) {} this.pc = null; }
@@ -203,8 +261,8 @@ class CallEngine {
         ov.innerHTML = `
             ${this.withVideo ? videoArea : ''}
             <div style="z-index:3; text-align:center; margin-top:30px;">
-                <div style="font-size:4rem;">${this._avatar(this.peerId)}</div>
-                <div style="font-size:1.5rem; font-weight:900; margin-top:10px;">${name}</div>
+                <div class="m-avatar" style="width:96px;height:96px;margin:0 auto;font-size:2.4rem;">${bbqAvatar(this.peerId, this._name(this.peerId), this._avatar(this.peerId))}</div>
+                <div style="font-size:1.5rem; font-weight:900; margin-top:10px;">${escHtml(name)}</div>
                 <div style="font-size:0.95rem; color:var(--wa-text-secondary); margin-top:6px;">${status}</div>
             </div>
             ${!this.withVideo ? videoArea : ''}

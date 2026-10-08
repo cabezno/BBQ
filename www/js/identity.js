@@ -95,6 +95,16 @@
         getSignPublicKeyB64() { return this._profile && this._profile.signPublicKeyB64; },
         getEcdhPublicKeyB64() { return this._profile && this._profile.ecdhPublicKeyB64; },
 
+        /** Firma que ata mi clave de cifrado (ECDH) a mi identidad. Se calcula una vez. */
+        async getEcdhSig() {
+            const p = await this.ensure();
+            if (!p.ecdhSig) {
+                p.ecdhSig = await this.sign(`bbq-ecdh-v1|${p.peerId}|${p.ecdhPublicKeyB64}`);
+                await window.BBQDB.kvSet(KEY_PROFILE, p);
+            }
+            return p.ecdhSig;
+        },
+
         /** Firma un texto con la clave privada de firma. Devuelve la firma en base64. */
         async sign(dataStr) {
             await this.ensure();
@@ -123,6 +133,7 @@
                 const key = normalizePhone(p.phone);
                 const ts = Date.now();
                 const sig = await this.sign(`${p.peerId}|${key}|${ts}`);
+                const ecdhSig = await this.getEcdhSig();
                 const res = await fetch(`${window.BBQ_SERVER}/api/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -132,6 +143,7 @@
                         peerId: p.peerId,
                         signPublicKey: p.signPublicKeyB64,
                         ecdhPublicKey: p.ecdhPublicKeyB64,
+                        ecdhSig,
                         ts,
                         sig
                     })

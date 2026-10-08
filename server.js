@@ -103,6 +103,11 @@ function seedBots() {
     directory['5491100000007'] = { phone: '5491100000007', name: '🤖 Claude (BBQ)', peerId: 'bbq_claude', publicKey: 'CLAUDEKEY', updatedAt: new Date().toISOString() };
 }
 
+async function loadListings() {
+    try { listings = await listingsStore.loadAll(); console.log(`\x1b[36m[STORES] Fichas cargadas: ${Object.keys(listings).length}\x1b[0m`); }
+    catch (e) { console.error('[STORES] Error cargando:', e.message); listings = {}; }
+}
+
 async function loadDirectory() {
     try {
         directory = await store.loadAll();
@@ -127,10 +132,12 @@ function normalizePhone(raw) {
 }
 
 // ── Registro / actualización de identidad (FIRMADO) ──
-// Body: { phone, name, peerId, signPublicKey, ecdhPublicKey, ts, sig }
+// Body: { phone, name, peerId, signPublicKey, ecdhPublicKey, ecdhSig, ts, sig }
 // El cliente firma `${peerId}|${telefonoNormalizado}|${ts}` con su clave privada.
+// ecdhSig = firma de `bbq-ecdh-v1|${peerId}|${ecdhPublicKey}`: ata la clave de cifrado a la
+// identidad, así los clientes la verifican solos y el server no puede cambiarla.
 app.post('/api/register', async (req, res) => {
-    const { phone, name, peerId, signPublicKey, ecdhPublicKey, ts, sig } = req.body || {};
+    const { phone, name, peerId, signPublicKey, ecdhPublicKey, ecdhSig, ts, sig } = req.body || {};
     const key = normalizePhone(phone);
     if (!key || key.length < 6) {
         return res.status(400).json({ ok: false, error: 'Teléfono inválido' });
@@ -152,6 +159,10 @@ app.post('/api/register', async (req, res) => {
     if (!ok) {
         return res.status(403).json({ ok: false, error: 'Firma inválida' });
     }
+    // 3b) Si viene la firma de la clave de cifrado, tiene que ser válida.
+    if (ecdhSig && !(await verifySig(signPublicKey, `bbq-ecdh-v1|${peerId}|${ecdhPublicKey || ''}`, ecdhSig))) {
+        return res.status(403).json({ ok: false, error: 'Firma de clave de cifrado inválida' });
+    }
     // 4) El número es solo una etiqueta: primero que llega lo toma; otra identidad no lo pisa.
     if (directory[key] && directory[key].peerId && directory[key].peerId !== peerId) {
         return res.status(409).json({ ok: false, error: 'Ese número ya está tomado por otra identidad' });
@@ -163,6 +174,7 @@ app.post('/api/register', async (req, res) => {
         signPublicKey: signPublicKey.toString().slice(0, 512),
         publicKey: (ecdhPublicKey || '').toString().slice(0, 2048), // ECDH para E2E (compat con campo previo)
         ecdhPublicKey: (ecdhPublicKey || '').toString().slice(0, 2048),
+        ecdhSig: (ecdhSig || '').toString().slice(0, 512),
         updatedAt: new Date().toISOString()
     };
     persistUser(key);
@@ -179,7 +191,7 @@ app.post('/api/contacts/match', (req, res) => {
         const key = normalizePhone(p);
         if (key && directory[key]) {
             const u = directory[key];
-            matches.push({ phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey });
+            matches.push({ phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey, ecdhSig: u.ecdhSig });
         }
     }
     res.json({ ok: true, matches });
@@ -190,7 +202,90 @@ app.get('/api/user/:phone', (req, res) => {
     const key = normalizePhone(req.params.phone);
     const u = directory[key];
     if (!u) return res.status(404).json({ ok: false, error: 'No encontrado' });
-    res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey } });
+    res.json({ ok: true, user: { phone: u.phone, name: u.name, peerId: u.peerId, publicKey: u.publicKey, signPublicKey: u.signPublicKey, ecdhSig: u.ecdhSig } });
+});
+
+// ── Servidores STUN/TURN para WebRTC (chat P2P, llamadas y vivos) ──
+// Sin TURN, muchas redes móviles o con NAT estricto no logran conectar directo.
+// Configuración por variables de entorno (ninguna es obligatoria):
+//   TURN_URLS="turn:turn.ejemplo.com:3478,turns:turn.ejemplo.com:5349"
+//   y una de dos:
+//   TURN_SECRET=...              → credenciales efímeras (coturn "use-auth-secret"), válidas 24 h
+//   TURN_USERNAME / TURN_CREDENTIAL → credenciales fijas
+app.get('/api/ice-servers', (req, res) => {
+    const ice = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+    const urls = (process.env.TURN_URLS || '').split(',').map(u => u.trim()).filter(Boolean);
+    if (urls.length) {
+        if (process.env.TURN_SECRET) {
+            const username = `${Math.floor(Date.now() / 1000) + 24 * 3600}:bbq`;
+            const credential = require('crypto').createHmac('sha1', process.env.TURN_SECRET).update(username).digest('base64');
+            ice.push({ urls, username, credential });
+        } else if (process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+            ice.push({ urls, username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL });
+        }
+    }
+    res.set('Cache-Control', 'no-store');
+    res.json({ ok: true, iceServers: ice });
+});
+
+// ── Directorio de TIENDAS y SERVICIOS DE ENTREGA (publicados por sus dueños) ──
+// Cada ficha va FIRMADA con la clave de identidad del dueño: el server la verifica y la guarda
+// tal cual (string), así cualquier cliente puede re-verificarla sin confiar en el server.
+// Firma: `bbq-listing-v1|${peerId}|${kind}|${ts}|${listingJson}`. Una ficha por dueño y tipo.
+const listingsStore = store.ns('stores');
+let listings = {}; // `${kind}:${peerId}` → { kind, peerId, signPublicKey, listingJson, ts, sig, updatedAt }
+const LISTING_KINDS = ['store', 'delivery'];
+const LISTING_MAX = 32 * 1024;
+
+function validListing(kind, l) {
+    if (!l || typeof l !== 'object') return 'Ficha inválida';
+    if (typeof l.name !== 'string' || !l.name.trim() || l.name.length > 60) return 'Nombre inválido';
+    for (const k of ['category', 'region', 'description', 'icon', 'hours']) {
+        if (l[k] != null && (typeof l[k] !== 'string' || l[k].length > 300)) return `Campo ${k} inválido`;
+    }
+    if (l.products != null && (!Array.isArray(l.products) || l.products.length > 100)) return 'Productos inválidos';
+    if (l.zones != null && (!Array.isArray(l.zones) || l.zones.length > 30)) return 'Zonas inválidas';
+    if (kind === 'delivery' && !(Array.isArray(l.zones) && l.zones.length)) return 'Un servicio de entrega necesita al menos una zona';
+    return null;
+}
+
+app.post('/api/stores', async (req, res) => {
+    const { kind, peerId, signPublicKey, listingJson, ts, sig } = req.body || {};
+    if (!LISTING_KINDS.includes(kind)) return res.status(400).json({ ok: false, error: 'Tipo inválido' });
+    if (typeof listingJson !== 'string' || listingJson.length > LISTING_MAX) return res.status(400).json({ ok: false, error: 'Ficha demasiado grande' });
+    if (!Number.isFinite(Number(ts)) || Math.abs(Date.now() - Number(ts)) > 120000) return res.status(400).json({ ok: false, error: 'Publicación caducada' });
+    if (!signPublicKey || !sig || (await peerIdFromSignPub(signPublicKey)) !== peerId) return res.status(403).json({ ok: false, error: 'Identidad inválida' });
+    if (!(await verifySig(signPublicKey, `bbq-listing-v1|${peerId}|${kind}|${ts}|${listingJson}`, sig))) return res.status(403).json({ ok: false, error: 'Firma inválida' });
+    let listing; try { listing = JSON.parse(listingJson); } catch (e) { return res.status(400).json({ ok: false, error: 'JSON inválido' }); }
+    const err = validListing(kind, listing);
+    if (err) return res.status(400).json({ ok: false, error: err });
+    const key = `${kind}:${peerId}`;
+    listings[key] = { kind, peerId, signPublicKey, listingJson, ts: Number(ts), sig, updatedAt: new Date().toISOString() };
+    listingsStore.put(key, listings[key]).catch(e => console.error('[STORES] Error persistiendo:', e.message));
+    console.log(`\x1b[32m[STORES] Publicada ${kind}: ${listing.name}\x1b[0m`);
+    res.json({ ok: true });
+});
+
+// Despublicar: firma `bbq-unlist-v1|${peerId}|${kind}|${ts}`.
+app.post('/api/stores/unpublish', async (req, res) => {
+    const { kind, peerId, signPublicKey, ts, sig } = req.body || {};
+    const key = `${kind}:${peerId}`;
+    if (!listings[key]) return res.json({ ok: true });
+    if (!Number.isFinite(Number(ts)) || Math.abs(Date.now() - Number(ts)) > 120000) return res.status(400).json({ ok: false, error: 'Pedido caducado' });
+    if (listings[key].signPublicKey !== signPublicKey || !(await verifySig(signPublicKey, `bbq-unlist-v1|${peerId}|${kind}|${ts}`, sig))) {
+        return res.status(403).json({ ok: false, error: 'Firma inválida' });
+    }
+    delete listings[key];
+    listingsStore.del(key).catch(() => {});
+    res.json({ ok: true });
+});
+
+// Listado: GET /api/stores?kind=store|delivery  (más recientes primero; el filtrado fino lo hace el cliente)
+app.get('/api/stores', (req, res) => {
+    const kind = LISTING_KINDS.includes(req.query.kind) ? req.query.kind : 'store';
+    const out = Object.values(listings).filter(l => l.kind === kind)
+        .sort((a, b) => b.ts - a.ts).slice(0, 300);
+    res.json({ ok: true, listings: out });
 });
 
 // ── Proxy de IA (evita CORS de los proveedores; la API key la manda el cliente) ──
@@ -365,7 +460,8 @@ function botReply(text) {
    SEÑALIZACIÓN WebRTC (transitoria, no guarda mensajes)
    ══════════════════════════════════════════════════════════════ */
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+// maxPayload: un adjunto por relay entra holgado; un frame de 100 MB (default de ws) no.
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 * 1024 });
 
 const onlinePeers = new Map(); // peerId → ws
 
@@ -404,6 +500,7 @@ wss.on('connection', (ws, req) => {
 
         // ── Paso 1: HELLO { peerId, signPublicKey } → el server manda un reto ──
         if (msg.type === 'HELLO') {
+            if (authed) return; // la identidad de un socket no cambia una vez probada
             const expected = await peerIdFromSignPub(msg.signPublicKey);
             if (!msg.signPublicKey || !msg.peerId || expected !== msg.peerId) {
                 ws.send(JSON.stringify({ type: 'AUTH-FAIL', error: 'peerId/clave inválidos' }));
@@ -439,6 +536,9 @@ wss.on('connection', (ws, req) => {
 
         // A partir de acá, TODO exige estar autenticado (nadie reenvía/recibe sin probar identidad).
         if (!authed) { return; }
+
+        // El remitente es SIEMPRE la identidad probada de este socket: nunca el `from` que manda el cliente.
+        msg.from = myPeerId;
 
         // Confirmación de recepción (ACK): la reenvía al emisor para que marque ✓ y borre su outbox.
         if (msg.type === 'CHAT_ACK' && msg.to) {
@@ -510,7 +610,8 @@ wss.on('connection', (ws, req) => {
     });
 
     ws.on('close', () => {
-        if (myPeerId) {
+        // Si el mismo peer ya se reconectó con otro socket, este cierre viejo no lo pone offline.
+        if (myPeerId && onlinePeers.get(myPeerId) === ws) {
             onlinePeers.delete(myPeerId);
             console.log(`\x1b[31m[WS] Offline: ${myPeerId} (${onlinePeers.size} conectados)\x1b[0m`);
             broadcastPresence('PEER_OFFLINE', myPeerId);
@@ -519,9 +620,14 @@ wss.on('connection', (ws, req) => {
 
     ws.on('error', (err) => console.error('[WS] Error:', err.message));
 
+    // Heartbeat: si no contestó el ping anterior, la conexión está muerta (típico en móvil).
+    let alive = true;
+    ws.on('pong', () => { alive = true; });
     const ping = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) ws.ping();
-        else clearInterval(ping);
+        if (ws.readyState !== WebSocket.OPEN) { clearInterval(ping); return; }
+        if (!alive) { clearInterval(ping); try { ws.terminate(); } catch (e) {} return; }
+        alive = false;
+        ws.ping();
     }, 30000);
 });
 
@@ -541,6 +647,7 @@ function getLanAddresses() {
 
 async function start() {
     await loadDirectory();     // trae el directorio persistido (Upstash/archivo)
+    await loadListings();      // fichas de tiendas y servicios de entrega
     seedBots();                // contactos "BBQ Test" y "Claude" siempre presentes (en memoria)
     seedFlows();               // flujo de agente por defecto (asistente de tienda)
     startServer();

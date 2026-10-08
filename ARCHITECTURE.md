@@ -42,6 +42,7 @@ App de mensajería y comercio P2P estilo WhatsApp, **app nativa** (Android + iPh
 - `POST /api/contacts/match` — le paso mi agenda, me devuelve quiénes tienen BBQ
 - `GET /api/user/:phone` — lookup individual
 - `GET /api/status` — estado
+- `POST /api/stores` · `POST /api/stores/unpublish` · `GET /api/stores?kind=store|delivery` — directorio de tiendas y servicios de entrega. Las fichas van firmadas por su dueño y los clientes las verifican.
 - `WS /ws` — señalización: `HELLO`, `SIGNAL {to, from, data}`, `IS-ONLINE`, `PING`
 - Persistencia: `directory.json` (solo teléfono + nombre + peerId + publicKey)
 
@@ -50,12 +51,33 @@ App de mensajería y comercio P2P estilo WhatsApp, **app nativa** (Android + iPh
 - `js/identity.js` *(nuevo)* — clave de dispositivo + peerId + registro en directorio
 - `js/contacts.js` *(nuevo)* — leer agenda, match, invitar
 - `js/p2p-node.js` — transporte WebRTC (DataChannel) + señalización
-- `js/crypto-e2e.js` *(nuevo, opcional)* — cifrado de mensajes
+- `js/e2e.js` — cifrado de extremo a extremo de los mensajes entre personas (ver abajo)
+- `js/listings.js` — publicar y leer fichas firmadas del directorio de tiendas y entregas
+- `js/orders.js` — pedidos con estados (aviso al cliente por chat cifrado) y bandeja "El agente propone"
+- `js/loyalty.js` — fidelización: sellos firmados por la tienda y guardados por el cliente
+- `js/ux.js`, `js/ux-commerce.js` — pestaña Yo, Centro de privacidad, código de seguridad y pantallas de comercio
 - Motores existentes: `ai-orchestrator`, `escrow-engine`, `google-pay-engine`, `logistics-engine`, `automation-engine`, `referral-engine`, `p2p-live-engine`, `app.js`
 
 ### Capacitor
 - `capacitor.config.json` — `appId`, `webDir: "www"`
 - Plugins: `@capacitor-community/contacts` (agenda), `@capacitor/share` (invitar), `@capacitor/push-notifications` (push)
+
+---
+
+## Cifrado de extremo a extremo (E2E)
+
+- Cada teléfono tiene dos claves: **firma** (ECDSA P-256, el `peerId` es su hash) y **cifrado** (ECDH P-256).
+- La clave de cifrado va **firmada** con la de identidad (`ecdhSig` = firma de `bbq-ecdh-v1|peerId|ecdhPub`).
+  Cualquiera verifica que una clave es de un `peerId` **sin confiar en el server** (no puede cambiarla).
+- Clave por contacto: `ECDH → HKDF-SHA256 → AES-GCM 256`, nonce aleatorio por mensaje, `AAD = emisor|receptor`.
+- Se cifra **todo** payload entre personas (texto, adjuntos, voz, avisos de vivo), vaya por P2P o por relay.
+  El server solo ve `{ type: 'e2e', ... }`.
+- Cada sobre lleva las claves públicas del emisor (autoverificables): el receptor descifra y contesta cifrado
+  aunque todavía no lo tenga agendado.
+- Si ya tengo las claves verificadas de un contacto, **descarto** cualquier mensaje suyo en claro o adulterado.
+- **Sin cifrar (por ahora):** bots y agentes (`bbq_testbot`, `bbq_claude`, `agent_*`), porque no publican claves.
+  La UI lo avisa. Para cifrarlos, el worker de PC tiene que tener sus propias claves.
+- Pendiente: *forward secrecy* (ratchet tipo Signal) y verificación de claves cara a cara (código de seguridad).
 
 ---
 
