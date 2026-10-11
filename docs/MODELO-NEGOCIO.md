@@ -51,6 +51,35 @@
 - **Responsabilidad por el envío:** el estudio propone que BBQ venda el envío en nombre propio y responda por la entrega. Eso choca con deslindarse.
 - **Defensa del consumidor:** la ley de relaciones de consumo (Ley 17.250) puede alcanzar al intermediario aunque los términos digan lo contrario. Hasta dónde se puede deslindar es una pregunta para el abogado.
 
+## Decisión del dueño (2026-10-11): identidad verificada para comerciar y pagos con freno en la captura
+
+> "El que instala la app escanea su documento vía chip NFC; una vez lo valida, puede usar tarjetas vía Google Pay o tarjeta con chip vía NFC, y la app para el proceso de la transacción en el cobro." Se exige para **comprar, vender o repartir: todo lo que implique transacciones**.
+
+- **La mensajería sigue libre.** El documento no se pide para instalar ni para chatear. Solo se pide para comerciar o repartir.
+- **Verificación con el chip del documento:**
+  - **Pasaporte:** estándar ICAO 9303. Los datos y la foto vienen firmados por el país emisor y se pueden verificar en el teléfono.
+  - **Cédula uruguaya con chip:** a confirmar qué se lee sin PIN y cómo se valida (Agesic / ID Uruguay).
+- **Privacidad (Ley 18.331):** la verificación se hace en el teléfono. Al servidor o al directorio llega solo "identidad verificada" más un hash, nunca la foto ni el número de documento.
+- **Para qué sirve:**
+  - es el **respaldo** de las dos partes para litigar (ver la decisión de disputas);
+  - sirve para el paso de Particular a Comercio;
+  - y evita las cuentas falsas en los referidos.
+- **Medios de pago**, los dos dentro de la app nativa (en la PWA no hay acceso a NFC para pagos):
+  - **Google Pay:** con la API de Google Pay, no con la facturación de Google Play, que es para cosas digitales.
+  - **Tarjeta con chip por NFC:** el teléfono del vendedor o del cadete hace de posnet (SoftPOS / Tap to Pay), mediante el kit certificado de un proveedor con adquirente.
+- **"Parar la transacción en el cobro" = autorizar ahora y capturar después.** La app no puede pausar el intercambio entre la tarjeta y el lector. Lo que hace es pedir solo la **autorización** (el banco del comprador bloquea el monto) y dejar la **captura** en suspenso hasta que se cumpla la regla:
+  - se captura con el QR de entrega escaneado o con el acuerdo de las partes;
+  - se cancela cuando vence el plazo.
+
+  La plata nunca pasa por BBQ, y esto es coherente con el estudio (§3) y con no arbitrar.
+
+**A confirmar con proveedores y adquirentes:**
+- quién ofrece SoftPOS en Uruguay;
+- si permiten la preautorización en cobros sin contacto;
+- el plazo máximo de la retención por tarjeta y por rubro;
+- el PIN para montos altos;
+- el permiso de Apple para Tap to Pay en iPhone.
+
 ## Decisiones abiertas
 
 | Tema | Opciones | Lo que dice el estudio |
@@ -87,6 +116,8 @@ Nada de esto toca dinero.
 | **Modalidades** | Retiro en el local (`PICKUP`) y couriers como nodos | Empezar con retiro, envío del vendedor y empresas de logística. La red propia de repartidores se posterga (Ley 20.396). El directorio de "Entregas" sirve para cadeterías que se publican |
 | **Vencimiento** | No existe | Cancelar la reserva si no hubo escaneo ni reclamo antes de que venza |
 | **Tipos de cuenta** | No existe | Particular o Comercio, con límites y un paso a Comercio |
+| **Identidad para comerciar** | No existe | Leer el chip del documento (pasaporte o cédula) en el teléfono y exigirlo para comprar, vender y repartir (decisión del 11/10) |
+| **Cobro con tarjeta** | No existe (solo Google Pay en TEST) | Google Pay y SoftPOS por NFC en la app nativa, con autorización ahora y captura al entregar |
 | **Facturación** | No existe | e-Ticket o e-Factura automática al cobrar, vía un proveedor habilitado |
 | **Referidos** | `referral-engine.js` cuenta en el propio teléfono (inflable) | Conteo en el servidor, invitado real (teléfono verificado + primera compra), escalones de 3 y 10, premios = cupones del comercio con canje por QR |
 | **Vendedores de BBQ (0,4%)** | No existe | Código o link de alta de comercio y panel de comisiones sobre ventas entregadas |

@@ -387,6 +387,7 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 5. Si negocios y cadetes ven un "saldo cobrado" en la app antes de la transferencia, ¿cuenta como
    dinero electrónico? ¿Cómo diseñarlo para que no lo sea?
 6. Adelantar pagos a cadetes con capital propio: ¿implicancias regulatorias?
+7. **Decisión del 2026-10-11:** se exige identidad verificada con el chip del documento para comprar, vender o repartir. ¿Qué obligaciones trae (Ley 18.331, prevención de lavado)? ¿Alcanza con guardar solo "verificado" más un hash en el servidor?
 
 **Contador:**
 1. IVA e IRAE en cada esquema (intermediario vs comisionista / venta por cuenta ajena).
@@ -404,6 +405,7 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 1. ¿Nos dan de alta como comercio, como marketplace o nos exigen ser facilitador de pagos?
 2. ¿Soportan preautorización / captura diferida? ¿Plazo máximo?
 3. Requisitos, garantías, tasas y plazos de liquidación.
+4. ¿Ofrecen SoftPOS / Tap to Pay (el celular como posnet por NFC) en Uruguay? ¿Permiten preautorización en cobros sin contacto? ¿Aceptan tokens de Google Pay con captura diferida?
 
 ---
 

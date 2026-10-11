@@ -4,6 +4,18 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — Decisión: identidad con el chip del documento para comerciar y cobro con freno en la captura
+- **Qué:**
+  - Nueva sección de decisión en `docs/MODELO-NEGOCIO.md` y dos filas nuevas en la tabla de huecos.
+  - Preguntas nuevas para el abogado y los adquirentes en `docs/MODELO-PAGOS-Y-ENTREGAS.md` §9.
+  - Línea nueva en `CLAUDE.md` y actualización de `docs/RETOMAR.md`.
+- **Por qué:** el dueño definió que para comprar, vender o repartir hay que verificar la identidad leyendo el chip del documento por NFC. El pago puede ser con Google Pay o con tarjeta con chip por NFC, y la app "para la transacción en el cobro". Se precisó que ese freno es autorizar ahora y capturar después, porque la app no puede pausar el intercambio con la tarjeta y la plata no pasa por BBQ.
+- **Cómo se probó:** solo documentación; no cambia código.
+- **Pendiente:**
+  - confirmar la lectura de la cédula uruguaya;
+  - confirmar SoftPOS y preautorización sin contacto con los adquirentes;
+  - plugin nativo (Capacitor) para leer el documento y cobrar.
+
 ## 2026-10-08 — Nota para retomar en otra sesión
 - **Qué:** `docs/RETOMAR.md` con el estado de la rama y del PR, lo último hecho, ideas en exploración y próximos pasos posibles.
 - **Por qué:** el dueño sigue desde una sesión de escritorio que no tiene el contexto de esta conversación.
