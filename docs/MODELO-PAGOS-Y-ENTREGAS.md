@@ -391,6 +391,7 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 8. **Decisión del 2026-10-11 (b):** cada vendedor cobra en su propia cuenta y BBQ solo orquesta la captura y cobra comisión por split. ¿BBQ igual tiene que registrarse como PSPC? ¿Qué responsabilidad le queda ante el consumidor?
 9. Compra firmada con la cédula (firma electrónica avanzada, Ley 18.600) o con la clave de la app: ¿qué valor probatorio tiene cada una? ¿Agesic permite firmar con la cédula desde el celular por NFC?
 10. **Decisión del 2026-10-11 (c):** contrato de compraventa electrónico por compra, firmado por las partes (firma avanzada con la cédula y validación facial). ¿Qué validez tiene? ¿Sostiene que las disputas se resuelvan entre las partes? ¿Qué cláusulas mínimas exige la Ley 17.250?
+11. Compraventa entre particulares ocasionales: ¿es contrato civil y no relación de consumo? Cuotas sin interés acordadas entre las partes y pagadas por transferencia: ¿hay algún problema regulatorio (ley de usura, crédito)? ¿El contrato firmado sirve como título para reclamar la deuda?
 
 **Contador:**
 1. IVA e IRAE en cada esquema (intermediario vs comisionista / venta por cuenta ajena).
@@ -399,6 +400,7 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 4. Beneficios posibles (Ley de Inversiones, programas ANII).
 5. Envío vendido por BBQ en nombre propio y comprado a cadetes/cadeterías: IVA, y cómo factura el
    cadete individual (unipersonal / monotributo). ¿Producto y envío en uno o dos comprobantes?
+   **(11/10)** ¿El contrato firmado por compra sirve como comprobante para un vendedor particular sin RUT?
 6. Particulares: ¿dónde está el límite entre venta ocasional y habitual? ¿BBQ / la empresa de pagos
    debe informar a DGI esas ventas? ¿Cómo se factura la comisión a un particular?
 7. Si se evalúa la cooperativa de cadetes: régimen tributario y de aportes real de una cooperativa de
@@ -411,6 +413,8 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 4. ¿Ofrecen SoftPOS / Tap to Pay (el celular como posnet por NFC) en Uruguay? ¿Permiten preautorización en cobros sin contacto? ¿Aceptan tokens de Google Pay con captura diferida?
 5. ¿Ofrecen la consulta de nombre del titular (Visa/Mastercard Account Name Inquiry) o una forma de verificar que la tarjeta es de la persona verificada? ¿Y 3-D Secure en Uruguay?
 6. ¿Habilitan cobros MOTO / tarjeta no presente (sin código de seguridad) a cuentas de vendedores de un marketplace? ¿Con qué límites, tasas y requisitos? ¿Aceptan las pruebas de Visa "Compelling Evidence 3.0" en contracargos?
+7. ¿Dan alta a personas sin empresa (sin RUT) con liquidación directa a su caja de ahorro? ¿Con SoftPOS? ¿Con cuotas?
+8. **Bancos / BCU:** ¿hay transferencias instantáneas entre todos los bancos y QR interoperable que la app pueda verificar al instante (para "pagar al entregar")?
 
 ---
 

@@ -18,6 +18,7 @@
   - tabla de vías de cobro por NFC: SoftPOS certificado, NFC para leer más 3-D Secure, y cobro directo sin certificación (en exploración, como MOTO / tarjeta no presente). **Vía 4 preferida:** validar la tarjeta por NFC (posesión, autenticidad y titular) y cobrar por camino aprobado. Próximo paso sugerido: prototipo nativo que lea tarjeta y documento por NFC, sin cobrar.
 
 - **Decisión del 11/10 (c):** contrato de compraventa firmado por compra (identidad, rostro, tarjeta validada y firma), considerado por el dueño la vía más sólida contra el fraude y los falsos reclamos.
+- **Vendedor sin empresa (11/10):** cobra por billetera (tarjeta), por transferencia directa a su caja de ahorro (pagando al entregar), o con un plan de cuotas en el contrato. Ver la tabla en `docs/MODELO-NEGOCIO.md`.
 
 ## Para probar en Render
 Mergear el PR (o apuntar Render a la rama) y cargar las variables de Upstash.

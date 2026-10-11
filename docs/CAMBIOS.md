@@ -4,6 +4,17 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — Vendedor sin empresa: vías de cobro, transferencia directa y cuotas en el contrato
+- **Qué:**
+  - Sección nueva en `docs/MODELO-NEGOCIO.md`: ¿necesita empresa?, compraventa civil entre particulares y una tabla de vías de cobro (billetera con tarjeta, transferencia directa pagando al entregar, plan de cuotas en el contrato, tarjeta en cuotas y mixto).
+  - Preguntas nuevas en `docs/MODELO-PAGOS-Y-ENTREGAS.md` §9 para el abogado (11), el contador y los adquirentes y bancos (7 y 8).
+- **Por qué:** el dueño preguntó cómo cobra y cómo se le acredita la venta a un vendedor sin empresa, si puede ir directo a una caja de ahorro sin intermediario, y cómo se hacen las cuotas.
+- **Cómo se probó:** solo documentación.
+- **Pendiente:**
+  - confirmar con los proveedores el alta de personas sin RUT y el SoftPOS;
+  - confirmar las transferencias instantáneas y el QR interoperable;
+  - consultar al abogado por las cuotas entre particulares.
+
 ## 2026-10-11 — Decisión: contrato de compraventa firmado por compra
 - **Qué:**
   - Sección nueva en `docs/MODELO-NEGOCIO.md` con las piezas: identidad, rostro on-device, tarjeta validada, plantilla de contrato, firma, cobro y guardado. Incluye por qué, límites y qué hay que confirmar.

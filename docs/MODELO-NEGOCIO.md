@@ -170,6 +170,20 @@ El vendedor lo presenta ante un contracargo, y también es el respaldo de las pa
 - **Agesic:** API de validación facial y firma con cédula por NFC desde el celular.
 - **Abogado:** validez del contrato de compraventa electrónico con firma avanzada, y si sostiene la decisión de disputas entre las partes.
 
+## Vendedor sin empresa: cómo cobra (conversación del 11/10, para confirmar)
+- **¿Necesita empresa?** Si vende algo propio de vez en cuando, en principio no. Si vende seguido o revende, monotributo (a confirmar con el contador). La app sugiere pasar a Comercio cuando se superan los límites, contando contratos firmados sin mirar su contenido.
+- **Compraventa entre particulares:** entre dos particulares ocasionales es en principio un **contrato civil**, no una relación de consumo (Ley 17.250 exige un "proveedor"). Ahí el contrato firmado y las disputas entre las partes tienen todavía más sustento (a confirmar con el abogado).
+
+### Vías de cobro del vendedor particular
+
+| Quiere… | Vía | Cómo funciona |
+|---|---|---|
+| Cobrar con tarjeta (NFC o online) | Billetera / proveedor que acepte personas sin empresa (p. ej. Mercado Pago), cuenta a su nombre conectada a BBQ | Autoriza → captura con QR → el proveedor descuenta su comisión, el split le pasa la suya a BBQ, y el resto se acredita en la cuenta del vendedor en el proveedor. De ahí a su banco. El saldo lo guarda el proveedor, no BBQ. Los adquirentes tradicionales suelen pedir RUT |
+| **Directo a su caja de ahorro, sin intermediario** | **Transferencia bancaria** (o QR interoperable desde la app del banco) | No hay retención posible: **se paga al entregar**. Se firma el contrato, se escanea el QR de entrega, el comprador transfiere y se entrega al ver la transferencia confirmada. Sin adquirente, sin empresa, costo nulo o bajo, sin contracargos: un reclamo pasa por el contrato |
+| Cuotas sin intermediario | **Plan de cuotas en el contrato**, cada cuota por transferencia | Variante "entrega al completar" (seña + cuotas, se entrega con la última): el vendedor no arriesga. Variante "entrega al inicio": el vendedor financia, y el contrato firmado documenta la deuda. BBQ solo arma el calendario, recuerda y registra cada pago como recibo firmado por las dos partes. **Sin intereses y ocasional:** con intereses aplica la ley de usura, y si es habitual es crédito regulado |
+| Cuotas financiadas por el banco del comprador | Tarjeta de crédito en cuotas, por billetera o adquirente | Se autoriza el total y se captura con el QR. "Sin recargo" tiene un costo para el vendedor |
+| Mixto | Seña por transferencia + resto con tarjeta (o al revés) | Igual que arriba, combinado en el contrato |
+
 ## Decisiones abiertas
 
 | Tema | Opciones | Lo que dice el estudio |
