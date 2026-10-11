@@ -184,13 +184,57 @@ El vendedor lo presenta ante un contracargo, y también es el respaldo de las pa
 | Cuotas financiadas por el banco del comprador | Tarjeta de crédito en cuotas, por billetera o adquirente | Se autoriza el total y se captura con el QR. "Sin recargo" tiene un costo para el vendedor |
 | Mixto | Seña por transferencia + resto con tarjeta (o al revés) | Igual que arriba, combinado en el contrato |
 
+## Financiación y cobro propio (conversación del 11/10, en exploración)
+
+### A. BBQ Pagos como facilitador de pagos ("como Mercado Pago"), etapa 3 detallada
+- **Qué es:** un facilitador de pagos (PayFac). Ante las marcas, BBQ Pagos es el comercio y da de alta a los vendedores (incluidos particulares sin RUT, con límites) como subcomercios, liquidándoles **directo a su caja de ahorro**.
+- **Los terceros que no se pueden sacar** con tarjeta: Visa/Mastercard, el banco del comprador y un adquirente patrocinador (o ser adquirente).
+- **Requisitos:**
+  1. BBQ Pagos SAS separada de la app.
+  2. Inscripción en el BCU como PSPC (y emisor de dinero electrónico solo si guarda saldos; se evita pagando directo a la caja de ahorro).
+  3. Prevención de lavado: oficial de cumplimiento, manual y reportes a la UIAF. La identidad verificada cubre el "conocer al cliente".
+  4. Contrato de facilitador con un adquirente (Fiserv, Getnet u OCA).
+  5. PCI DSS al nivel más alto, con auditoría anual.
+  6. SoftPOS: licenciar un kernel EMV certificado y una solución MPoC.
+  7. Operación de riesgo: contracargos, fraude y reserva de capital.
+- **Cambia el modelo A:** la plata pasa por BBQ Pagos entre la captura y la liquidación, y los contracargos le llegan primero a BBQ Pagos (que los recupera del vendedor por contrato).
+- **Plazo y costo:** de meses a más de un año, con capital y auditorías. Se mantiene el orden del estudio: proveedor existente → capa intercambiable → facilitador propio con volumen.
+
+### B. Retención de sueldo (Ley 17.829)
+- Solo pueden retener **entidades habilitadas por ley**, con el **consentimiento expreso** del trabajador, siguiendo un orden de prioridad (primero las pensiones alimenticias) y respetando un **mínimo intocable** (35% del nominal, o 30% para créditos y actos cooperativos; a confirmar la versión vigente).
+- No es una retención como la captura con QR: es **comprar ahora y pagar con el sueldo**, es decir, crédito.
+- El contrato firmado con identidad verificada y firma avanzada es el consentimiento que pide la ley.
+
+### C. Financiación de compras con inversores (crowdlending de consumo) — decisión del dueño 11/10
+- **Idea:** BBQ ofrece financiación de compras. Ponen la plata los inversores, el interés es su ganancia y el respaldo es el contrato de retención de ingresos que firma el comprador.
+- **Tasas (decisión del dueño):** el **interés es el mismo que el de las tarjetas de crédito, y también los recargos por mora**. A confirmar con el abogado que ambos queden bajo los topes de la ley de usura (18.212) para este tipo de crédito.
+- **Estructura que encaja: una cooperativa de ahorro y crédito de capitalización** (Ley 18.407). No recibe depósitos y por eso no la controla el BCU.
+  - inversores = socios que aportan capital;
+  - compradores = socios que reciben el crédito y lo devuelven con retención de sueldo (acto cooperativo);
+  - el interés se reparte como excedente entre los socios que aportaron capital.
+
+  Conecta con la §8 del estudio (BBQ como cooperativa). A confirmar si las cooperativas de capitalización pueden retener haberes.
+- **Alternativas:**
+  - plataforma de crowdlending bajo la norma del BCU (a confirmar si está vigente y si cubre consumo);
+  - plataformas de financiamiento colectivo de la Ley 19.820, pensadas para emprendimientos y valores, no consumo.
+- **Flujo en BBQ:**
+  1. El contrato de compraventa suma la cláusula de crédito y el consentimiento de retención, firmados con la cédula.
+  2. Con el QR de entrega, la cooperativa le paga **el total** al vendedor.
+  3. El empleador descuenta las cuotas y se las gira a la cooperativa.
+  4. La app muestra el calendario, los recibos y la mora. La plata pasa por la cooperativa, nunca por la app BBQ.
+- **"Garantía":** la retención no garantiza el cobro (despido, retenciones con más prioridad, mínimo intocable), y prometer rendimiento garantizado al público es oferta regulada. La protección se arma con:
+  - un **fondo de reserva** contra impagos, financiado con parte del interés;
+  - **diversificación** de cada inversor entre muchos préstamos;
+  - identidad verificada y contrato firmado.
+- **Cambia el estudio:** en el estudio, el crédito propio y el BNPL estaban descartados. Esta decisión los reabre, por la vía cooperativa.
+
 ## Decisiones abiertas
 
 | Tema | Opciones | Lo que dice el estudio |
 |---|---|---|
 | Figura | Intermediario (esquema PedidosYa) o comisionista | Esquema PedidosYa, a confirmar con abogado y contador |
 | Operativa de reparto y venta | Todo tercerizado con comisiones, o cooperativa | Encadenar: arrancar tercerizado (cadeterías y agentes comerciales) y proponer la cooperativa cuando haya un grupo estable. Ver §8b |
-| Cooperativa | Una o varias; variante A o B | Sin resolver |
+| Cooperativa | Una o varias; variante A o B | Sin resolver. **11/10:** se suma la opción de cooperativa de ahorro y crédito de capitalización para financiar compras con inversores socios |
 | Duración del 0,4% del vendedor | Mientras esté activo, o un plazo (p. ej. 24 meses) | Sin resolver |
 | Comprobantes | Producto y envío en uno o en dos | Pregunta para el contador |
 

@@ -4,6 +4,22 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — Financiación y cobro propio: facilitador como MP, retención de sueldo y crowdlending cooperativo
+- **Qué:**
+  - Sección nueva en `docs/MODELO-NEGOCIO.md` con tres partes:
+    - **A.** BBQ Pagos como facilitador de pagos, con requisitos y cambios;
+    - **B.** retención de sueldo (Ley 17.829);
+    - **C.** financiación de compras con inversores vía cooperativa de capitalización, con interés y mora iguales a los de las tarjetas de crédito (decisión del dueño).
+  - Fila de cooperativa actualizada en las decisiones abiertas.
+  - Preguntas 12 y 13 para el abogado.
+  - `docs/RETOMAR.md` actualizado.
+- **Por qué:** el dueño quiere cobrar con tarjeta sin terceros como hace MP, explorar la retención desde el sueldo y armar una plataforma de financiación donde los inversores ganen el interés.
+- **Cómo se probó:** solo documentación. Las referencias legales se buscaron en IMPO y en estudios jurídicos, y quedan "a confirmar".
+- **Pendiente:**
+  - consulta al abogado (preguntas 12 y 13);
+  - definir el fondo de reserva y los límites por comprador;
+  - el crédito propio, que reabre lo que el estudio había descartado.
+
 ## 2026-10-11 — Vendedor sin empresa: vías de cobro, transferencia directa y cuotas en el contrato
 - **Qué:**
   - Sección nueva en `docs/MODELO-NEGOCIO.md`: ¿necesita empresa?, compraventa civil entre particulares y una tabla de vías de cobro (billetera con tarjeta, transferencia directa pagando al entregar, plan de cuotas en el contrato, tarjeta en cuotas y mixto).

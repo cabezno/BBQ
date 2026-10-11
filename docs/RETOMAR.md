@@ -19,6 +19,7 @@
 
 - **Decisión del 11/10 (c):** contrato de compraventa firmado por compra (identidad, rostro, tarjeta validada y firma), considerado por el dueño la vía más sólida contra el fraude y los falsos reclamos.
 - **Vendedor sin empresa (11/10):** cobra por billetera (tarjeta), por transferencia directa a su caja de ahorro (pagando al entregar), o con un plan de cuotas en el contrato. Ver la tabla en `docs/MODELO-NEGOCIO.md`.
+- **Financiación (11/10, en exploración):** BBQ Pagos como facilitador (como MP), retención de sueldo (Ley 17.829) y financiación de compras con inversores vía cooperativa de capitalización, con tasa y mora iguales a las de las tarjetas de crédito. Ver la sección "Financiación y cobro propio" en `docs/MODELO-NEGOCIO.md`.
 
 ## Para probar en Render
 Mergear el PR (o apuntar Render a la rama) y cargar las variables de Upstash.

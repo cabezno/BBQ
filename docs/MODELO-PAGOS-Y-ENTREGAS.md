@@ -392,6 +392,12 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 9. Compra firmada con la cédula (firma electrónica avanzada, Ley 18.600) o con la clave de la app: ¿qué valor probatorio tiene cada una? ¿Agesic permite firmar con la cédula desde el celular por NFC?
 10. **Decisión del 2026-10-11 (c):** contrato de compraventa electrónico por compra, firmado por las partes (firma avanzada con la cédula y validación facial). ¿Qué validez tiene? ¿Sostiene que las disputas se resuelvan entre las partes? ¿Qué cláusulas mínimas exige la Ley 17.250?
 11. Compraventa entre particulares ocasionales: ¿es contrato civil y no relación de consumo? Cuotas sin interés acordadas entre las partes y pagadas por transferencia: ¿hay algún problema regulatorio (ley de usura, crédito)? ¿El contrato firmado sirve como título para reclamar la deuda?
+12. **Financiación (11/10):**
+    - ¿Una cooperativa de ahorro y crédito de capitalización puede retener haberes (Ley 17.829 / 18.407) para créditos de consumo entre socios?
+    - ¿Está vigente la norma del BCU de plataformas de crowdlending y cubre consumo?
+    - ¿Cuáles son los topes de usura vigentes (Ley 18.212) para el interés compensatorio y moratorio, si se cobran las mismas tasas que las tarjetas de crédito?
+    - ¿Cómo se comunica el rendimiento a los inversores socios sin que sea oferta pública de valores?
+13. **BBQ Pagos como facilitador (como MP):** requisitos y costos de PSPC y del contrato de facilitador; ¿se evita la figura de emisor de dinero electrónico liquidando directo a la caja de ahorro?
 
 **Contador:**
 1. IVA e IRAE en cada esquema (intermediario vs comisionista / venta por cuenta ajena).
