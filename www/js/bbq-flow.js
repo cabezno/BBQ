@@ -14,6 +14,10 @@
  *  - end:      termina
  *
  * Plantillas: {{input}} y {{var}} se reemplazan desde el contexto.
+ *
+ * Sin IA: si runLLM devuelve null (no hay modelo ni API con saldo), el flujo sigue igual:
+ *  - classify elige por palabras clave (s.keywords o las de KEYWORDS) en vez de "la primera opción";
+ *  - llm usa el texto s.fallback (plantilla) en vez del modelo.
  */
 (function (root, factory) {
     const mod = factory();
@@ -27,6 +31,36 @@
             const val = path.split('.').reduce((o, k) => (o == null ? o : o[k]), ctx);
             return val != null ? (typeof val === 'object' ? JSON.stringify(val) : String(val)) : '';
         });
+    }
+
+    // Palabras clave por intención (para clasificar sin IA). Sin acentos, en minúscula.
+    const KEYWORDS = {
+        precio: ['precio', 'cuanto', 'cuesta', 'sale', 'vale', 'valor', 'cotiz', '$'],
+        stock: ['stock', 'hay ', 'tenes', 'tienen', 'disponible', 'queda', 'quedan'],
+        envio: ['envio', 'envian', 'mandan', 'delivery', 'courier', 'retiro', 'retirar', 'llega', 'demora'],
+        comprar: ['comprar', 'compro', 'quiero', 'lo llevo', 'pagar', 'reservar', 'encargar', 'pedido'],
+        saludo: ['hola', 'buenas', 'buen dia', 'que tal', 'como estas']
+    };
+    function normalize(t) {
+        return ' ' + String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') + ' ';
+    }
+    // Elige la opción con más coincidencias. "saludo" solo gana si no hay otra intención
+    // ("hola, cuánto sale?" es precio). Sin coincidencias → "otro" si existe.
+    function classifyByKeywords(text, options, custom) {
+        const t = normalize(text);
+        let best = null, bestScore = 0;
+        for (const o of options) {
+            if (o === 'saludo') continue;
+            const words = (custom && custom[o]) || KEYWORDS[o] || [String(o)];
+            const score = words.filter(w => t.includes(String(w).toLowerCase())).length;
+            if (score > bestScore) { best = o; bestScore = score; }
+        }
+        if (best) return best;
+        if (options.includes('saludo')) {
+            const words = (custom && custom.saludo) || KEYWORDS.saludo;
+            if (words.some(w => t.includes(w))) return 'saludo';
+        }
+        return options.includes('otro') ? 'otro' : options[0];
     }
 
     async function runFlow(flow, input, opts) {
@@ -47,15 +81,18 @@
             if (!s || s.type === 'end') break;
 
             if (s.type === 'llm') {
-                const out = await runLLM(tpl(s.system, ctx), tpl(s.prompt || '{{input}}', ctx), { maxTokens: s.maxTokens || 200 });
+                let out = await runLLM(tpl(s.system, ctx), tpl(s.prompt || '{{input}}', ctx), { maxTokens: s.maxTokens || 200 });
+                if (out == null) out = s.fallback != null ? tpl(s.fallback, ctx) : (opts.noAiText || '(sin IA disponible)');
                 if (s.out) ctx[s.out] = out;
                 cur = s.next || null;
 
             } else if (s.type === 'classify') {
                 const opts2 = s.options || [];
                 const sys = tpl(s.system, ctx) + '\nRespondé SOLO con una de estas opciones exactas: ' + opts2.join(', ') + '. Sin ninguna otra palabra.';
-                const raw = (await runLLM(sys, tpl(s.prompt || '{{input}}', ctx), { maxTokens: 8 }) || '').toLowerCase();
-                const pick = opts2.find(o => raw.includes(String(o).toLowerCase())) || opts2[0];
+                const llmOut = await runLLM(sys, tpl(s.prompt || '{{input}}', ctx), { maxTokens: 8 });
+                const raw = (llmOut || '').toLowerCase();
+                const pick = opts2.find(o => raw.includes(String(o).toLowerCase()))
+                    || classifyByKeywords(tpl(s.prompt || '{{input}}', ctx), opts2, s.keywords);
                 if (s.out) ctx[s.out] = pick;
                 cur = (s.routes && s.routes[pick]) || s.next || null;
 
@@ -113,12 +150,13 @@
             {
                 id: 'responder', type: 'llm',
                 system: 'Sos el asistente de una tienda BBQ. Respondé breve y en español. Usá SOLO estos datos reales del catálogo:\n{{catalogo}}\nSi el cliente quiere comprar, confirmá el producto y el precio y ofrecé continuar la compra. Si no tenés el dato, decilo con honestidad.',
-                prompt: '{{input}}', out: 'respuesta', next: 'enviar'
+                prompt: '{{input}}', out: 'respuesta', next: 'enviar',
+                fallback: 'Esto es lo que tenemos ahora:\n{{catalogo}}\n\nSi querés comprar, decime cuál y te confirmo. (Respuesta automática)'
             },
             { id: 'enviar', type: 'reply', text: '{{respuesta}}', next: 'end' },
             { id: 'end', type: 'end' }
         ]
     };
 
-    return { runFlow, tpl, validate, DEFAULT_STORE_FLOW };
+    return { runFlow, tpl, validate, classifyByKeywords, DEFAULT_STORE_FLOW };
 });

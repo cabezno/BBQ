@@ -87,6 +87,8 @@ class LocalStorageEngine {
             chat = { contactId, messages: [] };
             db.chats.push(chat);
         }
+        // Un reenvío del outbox (o un ACK perdido) no debe duplicar el mensaje.
+        if (message && message.id && chat.messages.some(m => m.id === message.id)) return;
         chat.messages.push(message);
         this.saveDatabase(db);
     }
@@ -177,35 +179,13 @@ class LocalStorageEngine {
     // --- CALLS LOG API ---
     getCalls() {
         const db = this.getDatabase();
-        if (!db.calls || db.calls.length === 0) {
-            db.calls = [
-                {
-                    id: 'call_1',
-                    contactId: 'p2p_store_techzone',
-                    contactName: 'TechZone Store 🏬',
-                    contactAvatar: '🏬',
-                    type: 'incoming', // incoming | outgoing | missed
-                    timestamp: new Date(Date.now() - 1200000).toISOString()
-                },
-                {
-                    id: 'call_2',
-                    contactId: 'p2p_courier_express',
-                    contactName: 'Express Courier P2P 🚚',
-                    contactAvatar: '🚚',
-                    type: 'outgoing',
-                    timestamp: new Date(Date.now() - 86400000).toISOString()
-                },
-                {
-                    id: 'call_3',
-                    contactId: 'p2p_contact_juan',
-                    contactName: 'Juan Pérez 👨‍💼',
-                    contactAvatar: '👨‍💼',
-                    type: 'incoming',
-                    timestamp: new Date(Date.now() - 172800000).toISOString()
-                }
-            ];
+        // Antes se sembraban 3 llamadas inventadas: se descartan (solo llamadas reales).
+        const DEMO_IDS = ['call_1', 'call_2', 'call_3'];
+        if (db.calls && db.calls.some(c => DEMO_IDS.includes(c.id))) {
+            db.calls = db.calls.filter(c => !DEMO_IDS.includes(c.id));
             this.saveDatabase(db);
         }
+        if (!db.calls) db.calls = [];
         // Return sorted by most recent first
         return db.calls.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     }
@@ -325,7 +305,7 @@ class LocalStorageEngine {
 
     getStoresRankedByVisits() {
         const db = this.getDatabase();
-        const visits = db.storeVisits || { 'p2p_store_techzone': 5, 'store_electro': 2 };
+        const visits = db.storeVisits || {}; // antes venía con visitas inventadas
 
         const allStores = [
             {

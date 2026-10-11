@@ -21,8 +21,13 @@
             <div style="max-width:360px; width:100%; text-align:center; color:var(--wa-text-primary);">
                 <div style="font-size:3rem; margin-bottom:8px;">🔥</div>
                 <div style="font-size:1.6rem; font-weight:900; margin-bottom:4px;">Bienvenido a BBQ</div>
-                <div style="font-size:0.85rem; color:var(--wa-text-secondary); margin-bottom:24px;">
-                    Mensajería y comercio P2P. Tus datos viven en tu teléfono.
+                <div style="font-size:0.85rem; color:var(--wa-text-secondary); margin-bottom:16px;">
+                    Mensajería y comercio, directo entre personas.
+                </div>
+                <div style="text-align:left; font-size:0.8rem; line-height:1.45; background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:12px 14px; margin-bottom:18px;">
+                    <div style="margin-bottom:6px;">🔒 <b>Tus mensajes van cifrados</b> de punta a punta: ni nosotros podemos leerlos.</div>
+                    <div style="margin-bottom:6px;">📱 <b>Tus chats viven en tu teléfono</b>, no en un servidor.</div>
+                    <div>🛡️ <b>Compras protegidas</b>: el pago se libera cuando recibís.</div>
                 </div>
                 <input id="bbqOnbName" type="text" placeholder="Tu nombre"
                     style="width:100%; padding:14px; margin-bottom:12px; border-radius:12px; border:1px solid var(--wa-border-light);
@@ -36,7 +41,7 @@
                 </div>
                 <button id="bbqOnbSubmit"
                     style="width:100%; padding:14px; border-radius:12px; border:none; cursor:pointer;
-                    background:linear-gradient(90deg,#f59e0b,#f97316); color:#0b141a; font-weight:900; font-size:1rem;">
+                    background:var(--bbq-accent); color:var(--bbq-accent-ink); font-weight:900; font-size:1rem;">
                     Empezar
                 </button>
                 <div id="bbqOnbError" style="color:#f87171; font-size:0.8rem; margin-top:12px; min-height:18px;"></div>

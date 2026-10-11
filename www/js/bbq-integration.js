@@ -32,10 +32,28 @@
         async loadRealContacts() {
             const list = await window.BBQContacts.list();
             for (const c of list) this._mergeContact(c);
+            // Contactos agregados antes del E2E: traer sus claves firmadas del directorio
+            // (solo si el número sigue siendo de la MISMA identidad).
+            for (const c of list) {
+                if (c.ecdhSig || !c.phone) continue;
+                fetch(`${window.BBQ_SERVER}/api/user/${encodeURIComponent(c.phone)}`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(async d => {
+                        const u = d && d.user;
+                        if (!u || u.peerId !== c.peerId || !u.ecdhSig) return;
+                        Object.assign(c, { publicKey: u.publicKey, signPublicKey: u.signPublicKey, ecdhSig: u.ecdhSig });
+                        await window.BBQContacts.save(c);
+                        this._mergeContact(c);
+                    }).catch(() => {});
+            }
         },
 
         _mergeContact(c) {
             if (!c || !c.peerId) return;
+            // Claves de cifrado del contacto: se guardan solo si verifican contra su peerId.
+            if (window.BBQE2E && c.signPublicKey && c.publicKey && c.ecdhSig) {
+                window.BBQE2E.learn(c.peerId, c.signPublicKey, c.publicKey, c.ecdhSig).catch(() => {});
+            }
             // CONTACTS_DATA es global (definido en app.js). Lo mutamos (no reasignamos).
             if (typeof CONTACTS_DATA !== 'undefined') {
                 CONTACTS_DATA[c.peerId] = {
@@ -57,7 +75,7 @@
                 if (msg && (msg.type === 'live_start' || msg.type === 'live_end')) {
                     window.LIVE_HOSTS = window.LIVE_HOSTS || {};
                     const info = msg.message || {};
-                    const hostId = info.hostId || fromPeerId;
+                    const hostId = safeId(info.hostId || fromPeerId);
                     if (msg.type === 'live_start') {
                         const name = info.hostName || (typeof CONTACTS_DATA !== 'undefined' && CONTACTS_DATA[hostId] && CONTACTS_DATA[hostId].name) || 'Contacto';
                         window.LIVE_HOSTS[hostId] = { hostName: name, product: info.product };
@@ -74,11 +92,17 @@
                 // Asegurar que el remitente exista como contacto
                 if (typeof CONTACTS_DATA !== 'undefined' && !CONTACTS_DATA[fromPeerId]) {
                     let known = await window.BBQContacts.get(fromPeerId);
-                    if (!known) known = { peerId: fromPeerId, name: 'Nuevo contacto BBQ' };
+                    // El nombre viene dentro del sobre cifrado (lo elige el emisor; se escapa al pintar).
+                    if (!known) {
+                        known = { peerId: fromPeerId, name: (typeof msg._senderName === 'string' && msg._senderName.trim()) || 'Nuevo contacto BBQ' };
+                        // Solo se guarda (sobrevive a recargar) si vino cifrado: así hay una identidad verificada detrás.
+                        if (msg._e2e) { try { await window.BBQContacts.save(known); } catch (e) {} }
+                    }
                     this._mergeContact(known);
                 }
 
                 // Nota de voz entrante: decodificar el audio (base64) y guardarlo en IndexedDB.
+                if (msg.message.payloadCard) msg.message.payloadCard.id = safeId(msg.message.payloadCard.id);
                 if (msg.type === 'voice' && msg.audio && msg.message.payloadCard) {
                     try {
                         const blob = await (await fetch(msg.audio)).blob();
@@ -96,6 +120,16 @@
 
                 const incoming = msg.message;
                 incoming.sender = fromPeerId; // el remitente real
+                incoming.e2e = msg._e2e === true; // lo decide el receptor (descifró o no), no el emisor
+                // Tarjetas con efecto en el teléfono (antes de guardar): sellos de fidelidad (verificados) y estado de pedidos.
+                const pc = incoming.payloadCard;
+                if (pc && pc.type === 'stamp' && window.BBQLoyalty) {
+                    const ok = await window.BBQLoyalty.receive(fromPeerId, pc, incoming.e2e);
+                    if (!ok) pc.invalid = true;
+                }
+                if (pc && pc.type === 'order_update' && incoming.e2e && window.BBQOrders) {
+                    await window.BBQOrders.receiveUpdate(fromPeerId, pc);
+                }
                 window.buyerStorage.appendChatMessage(fromPeerId, incoming);
 
                 // Confirmar recepción (ACK) para que el emisor marque ✓ y borre su outbox.
@@ -105,7 +139,11 @@
                     if (typeof renderMobileMessages === 'function') renderMobileMessages();
                 }
                 if (typeof renderMobileChatList === 'function') renderMobileChatList();
-                bbqToast('💬 ' + (CONTACTS_DATA[fromPeerId]?.name || fromPeerId));
+                // Aviso solo si NO estoy mirando ese chat.
+                const convOpen = document.getElementById('screenConversation');
+                if (!(convOpen && convOpen.classList.contains('active') && currentChatId === fromPeerId)) {
+                    bbqToast('💬 ' + (CONTACTS_DATA[fromPeerId]?.name || fromPeerId));
+                }
             });
 
             window.BBQNet.onPeerState((peerId, state) => {
@@ -124,7 +162,11 @@
             });
 
             // ACK: el destinatario recibió → marcar ✓ y sacar del outbox.
-            window.BBQNet.onAck((fromPeerId, msgId) => {
+            // Solo vale el ACK del destinatario de ESE mensaje (otro peer no puede borrarlo).
+            window.BBQNet.onAck(async (fromPeerId, msgId) => {
+                let row = null;
+                try { row = await window.BBQDB.get('outbox', msgId); } catch (e) {}
+                if (row && row.to !== fromPeerId) return;
                 this.outboxRemove(msgId);
                 this._markSent(fromPeerId, msgId);
             });
@@ -186,7 +228,7 @@
                     </div>
                     <input id="bbqAddPhone" type="tel" placeholder="Número (ej: +54 9 11 5555-1234)"
                         style="width:100%; padding:13px; margin-bottom:10px; border-radius:12px; border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); font-size:1rem; outline:none;">
-                    <button id="bbqAddSearch" style="width:100%; padding:13px; border-radius:12px; border:none; cursor:pointer; background:linear-gradient(90deg,#f59e0b,#f97316); color:#0b141a; font-weight:900; margin-bottom:10px;">
+                    <button id="bbqAddSearch" style="width:100%; padding:13px; border-radius:12px; border:none; cursor:pointer; background:var(--bbq-accent); color:var(--bbq-accent-ink); font-weight:900; margin-bottom:10px;">
                         Buscar en BBQ y agregar
                     </button>
                     <button id="bbqImportAgenda" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--wa-border-light); cursor:pointer; background:var(--wa-dark-bg); color:var(--wa-text-primary); font-weight:600; margin-bottom:8px;">
@@ -220,7 +262,7 @@
                 this._mergeContact(r.contact);
                 if (typeof renderMobileChatList === 'function') renderMobileChatList();
                 result.style.color = '#22c55e';
-                result.innerHTML = `✅ ${r.contact.name} agregado. <a href="#" id="bbqOpenChat" style="color:#f59e0b;">Abrir chat</a>`;
+                result.innerHTML = `✅ ${escHtml(r.contact.name)} agregado. <a href="#" id="bbqOpenChat" style="color:#f59e0b;">Abrir chat</a>`;
                 document.getElementById('bbqOpenChat').onclick = (e) => {
                     e.preventDefault();
                     document.getElementById('bbqAddContactModal').style.display = 'none';
@@ -268,6 +310,9 @@
                 transition:opacity .3s; opacity:0;`;
             document.body.appendChild(t);
         }
+        // Dentro de un chat, el aviso va arriba del campo de escribir (no lo tapa).
+        const conv = document.getElementById('screenConversation');
+        t.style.bottom = (conv && conv.classList.contains('active')) ? '96px' : '24px';
         t.textContent = text;
         t.style.opacity = '1';
         clearTimeout(t._h);

@@ -40,3 +40,4 @@ bbq-agent-worker.js
 /android/
 /ios/
 .capacitor/
+stores.json

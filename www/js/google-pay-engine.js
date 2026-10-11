@@ -158,7 +158,7 @@ class GooglePayEngine {
                 <div style="margin-bottom:16px;">
                     <div style="font-size:0.75rem; color:var(--wa-text-secondary);">Comprando en</div>
                     <div style="font-size:0.95rem; font-weight:bold; color:var(--wa-text-primary);">BBQ P2P Store 🏬</div>
-                    <div style="font-size:0.8rem; color:var(--wa-text-secondary); margin-top:2px;">${description}</div>
+                    <div style="font-size:0.8rem; color:var(--wa-text-secondary); margin-top:2px;">${escHtml(description)}</div>
                 </div>
 
                 <!-- Método de Pago Seleccionado (Tarjeta Google Wallet) -->

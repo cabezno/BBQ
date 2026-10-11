@@ -1828,3 +1828,163 @@ body.mobile-body {
     from { transform: translateY(-40px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
+
+/* ==========================================================================
+   UX 2026-10: pestaña Yo, segmento Tiendas|Entregas, pantallas vacías,
+   marcas de ejemplo y Centro de privacidad (ver docs/UX.md)
+   ========================================================================== */
+.bbq-segment { display:flex; gap:4px; background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:4px; margin-bottom:12px; }
+.bbq-segment-btn { flex:1; border:none; background:none; color:var(--wa-text-secondary); font:600 0.88rem Inter,system-ui,sans-serif; padding:9px 8px; border-radius:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; min-height:40px; }
+.bbq-segment-btn.active { background:var(--wa-green); color:#0b141a; }
+
+.bbq-empty { text-align:center; padding:48px 24px; color:var(--wa-text-secondary); }
+.bbq-empty-icon { font-size:2.6rem; margin-bottom:10px; }
+.bbq-empty-title { color:var(--wa-text-primary); font-weight:800; font-size:1.05rem; margin-bottom:6px; }
+.bbq-empty-text { font-size:0.85rem; line-height:1.45; max-width:300px; margin:0 auto 18px; }
+.bbq-empty-btn { border:none; border-radius:999px; padding:12px 20px; min-height:44px; cursor:pointer; font:800 0.9rem Inter,system-ui,sans-serif; background:linear-gradient(90deg,#f59e0b,#f97316); color:#0b141a; display:inline-flex; align-items:center; gap:8px; }
+
+.bbq-demo-banner { display:flex; gap:8px; align-items:flex-start; font-size:0.78rem; line-height:1.4; color:var(--wa-text-secondary); background:var(--wa-header-bg); border:1px dashed var(--wa-border); border-radius:10px; padding:10px 12px; margin-bottom:12px; }
+.bbq-demo-pill { margin-left:auto; font-size:0.62rem; font-weight:800; letter-spacing:0.04em; color:var(--wa-text-secondary); border:1px solid var(--wa-border); border-radius:6px; padding:2px 6px; align-self:flex-start; }
+
+.bbq-me-card { width:100%; display:flex; align-items:center; gap:14px; text-align:left; background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:16px; padding:14px; margin-bottom:18px; cursor:pointer; color:var(--wa-text-primary); font-family:Inter,system-ui,sans-serif; }
+.bbq-me-avatar { width:58px; height:58px; flex:0 0 58px; border-radius:50%; background:var(--wa-incoming-bg); display:flex; align-items:center; justify-content:center; font-size:1.8rem; overflow:hidden; border:2px solid var(--wa-green); }
+.bbq-me-avatar img { width:100%; height:100%; object-fit:cover; }
+.bbq-me-name { display:block; font-weight:800; font-size:1.05rem; }
+.bbq-me-badge { display:inline-flex; align-items:center; gap:5px; margin-top:6px; font-size:0.7rem; font-weight:600; color:#22c55e; background:rgba(34,197,94,0.1); border-radius:999px; padding:3px 8px; }
+.bbq-me-group-title { font-size:0.72rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--wa-text-secondary); margin:4px 4px 6px; }
+.bbq-me-group { background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:14px; overflow:hidden; margin-bottom:16px; }
+.bbq-me-row { width:100%; display:flex; align-items:center; gap:12px; text-align:left; background:none; border:none; border-bottom:1px solid var(--wa-border-light); padding:12px 14px; min-height:56px; cursor:pointer; color:var(--wa-text-primary); font-family:Inter,system-ui,sans-serif; }
+.bbq-me-row:last-child { border-bottom:none; }
+.bbq-me-row:active, .bbq-me-card:active { background:var(--wa-incoming-bg); }
+.bbq-me-icon { width:34px; height:34px; flex:0 0 34px; border-radius:10px; background:rgba(245,158,11,0.12); color:var(--wa-green); display:flex; align-items:center; justify-content:center; font-size:1.05rem; }
+.bbq-me-text { flex:1; min-width:0; display:flex; flex-direction:column; }
+.bbq-me-title { font-weight:600; font-size:0.92rem; }
+.bbq-me-sub { display:block; font-size:0.76rem; color:var(--wa-text-secondary); margin-top:2px; }
+.bbq-me-chev { color:var(--wa-text-secondary); font-size:0.85rem; }
+.bbq-me-foot { text-align:center; font-size:0.72rem; color:var(--wa-text-secondary); padding:8px 0 90px; }
+
+.bbq-del-card { background:var(--wa-header-bg); border:1px solid var(--wa-border-light); border-radius:14px; padding:14px; }
+.bbq-del-head { display:flex; gap:12px; align-items:center; margin-bottom:10px; }
+.bbq-del-avatar { width:44px; height:44px; border-radius:50%; background:var(--wa-incoming-bg); display:flex; align-items:center; justify-content:center; font-size:1.4rem; }
+.bbq-del-name { display:block; font-weight:800; }
+.bbq-del-zone { display:flex; justify-content:space-between; gap:10px; font-size:0.82rem; padding:8px 0; border-top:1px solid var(--wa-border-light); }
+.bbq-del-zone span:last-child { color:var(--wa-text-secondary); white-space:nowrap; }
+
+.bbq-sheet-overlay { position:fixed; inset:0; z-index:150000; background:rgba(0,0,0,0.6); display:none; align-items:flex-end; justify-content:center; }
+.bbq-sheet { background:var(--wa-header-bg); color:var(--wa-text-primary); width:100%; max-width:480px; max-height:88vh; border-radius:20px 20px 0 0; display:flex; flex-direction:column; font-family:Inter,system-ui,sans-serif; }
+.bbq-sheet-head { display:flex; justify-content:space-between; align-items:center; padding:16px 16px 8px; }
+.bbq-sheet-title { font-weight:900; font-size:1.05rem; display:flex; gap:8px; align-items:center; }
+.bbq-sheet-title i { color:#22c55e; }
+.bbq-sheet-close { background:none; border:none; color:var(--wa-text-secondary); font-size:1.3rem; cursor:pointer; min-width:44px; min-height:44px; }
+.bbq-sheet-body { overflow-y:auto; padding:4px 16px 24px; }
+.bbq-priv-block { border:1px solid var(--wa-border-light); border-radius:12px; padding:12px 14px; margin-bottom:10px; font-size:0.84rem; line-height:1.45; }
+.bbq-priv-block.ok { border-color:rgba(34,197,94,0.35); }
+.bbq-priv-block.warn { border-color:rgba(245,158,11,0.4); }
+.bbq-priv-h { font-weight:800; margin-bottom:6px; }
+.bbq-priv-block ul { margin:0; padding-left:18px; color:var(--wa-text-secondary); }
+.bbq-priv-stats { display:flex; justify-content:space-around; font-size:0.8rem; color:var(--wa-text-secondary); padding-top:6px; }
+.bbq-priv-stats b { color:var(--wa-text-primary); font-size:1rem; }
+.ws-connection-pill { display:inline-flex; align-items:center; line-height:1.2; }
+.badge-similar-store { white-space:nowrap; }
+
+/* ── Comercio: directorio real, pedidos, fidelidad, código de seguridad ── */
+.bbq-section-title { font-size:0.72rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--wa-text-secondary); margin:6px 2px 8px; }
+.bbq-verified-pill { color:#22c55e; font-size:1.1rem; align-self:flex-start; }
+.bbq-btn-secondary { border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); border-radius:999px; padding:10px 14px; min-height:44px; font:600 0.85rem Inter,system-ui,sans-serif; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.bbq-label { display:block; font-size:0.78rem; font-weight:700; color:var(--wa-text-secondary); margin:10px 2px 4px; }
+.bbq-input { width:100%; box-sizing:border-box; padding:12px; min-height:44px; border-radius:10px; border:1px solid var(--wa-border-light); background:var(--wa-dark-bg); color:var(--wa-text-primary); font:0.95rem Inter,system-ui,sans-serif; outline:none; }
+.bbq-input:focus { border-color:var(--wa-green); }
+.bbq-zone-row { display:flex; gap:6px; margin-bottom:6px; }
+.bbq-toggle { display:flex; align-items:center; gap:10px; font-weight:600; margin:4px 2px 6px; min-height:44px; }
+.bbq-toggle input { width:20px; height:20px; accent-color:var(--wa-green); }
+.bbq-placeholder { font-size:0.78rem; line-height:1.45; color:var(--wa-text-secondary); border:1px dashed var(--wa-border); border-radius:10px; padding:10px 12px; }
+.bbq-me-count { background:var(--wa-green); color:#0b141a; font-size:0.7rem; font-weight:800; border-radius:999px; padding:2px 8px; margin-right:6px; }
+
+.bbq-stamp-card { background:linear-gradient(135deg, rgba(245,158,11,0.14), rgba(249,115,22,0.08)); border:1px solid rgba(245,158,11,0.4); border-radius:12px; padding:10px 12px; margin-top:6px; }
+.bbq-stamp-card.invalid { border-color:#ef4444; background:rgba(239,68,68,0.08); }
+.bbq-stamp-head { display:flex; justify-content:space-between; gap:8px; font-weight:800; font-size:0.86rem; margin-bottom:8px; }
+.bbq-stamp-dots { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+.bbq-stamp-dot { width:16px; height:16px; border-radius:50%; border:2px solid rgba(245,158,11,0.6); }
+.bbq-stamp-dot.on { background:var(--wa-green); border-color:var(--wa-green); }
+.bbq-stamp-reward { font-size:0.78rem; color:var(--wa-text-secondary); }
+
+.bbq-order-card { background:rgba(0,0,0,0.18); border:1px solid var(--wa-border); border-radius:12px; padding:10px 12px; margin-top:6px; }
+.bbq-order-head { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:800; font-size:0.86rem; margin-bottom:4px; }
+.bbq-order-status { font-size:0.68rem; font-weight:800; border-radius:999px; padding:3px 8px; background:rgba(134,150,160,0.18); white-space:nowrap; }
+.bbq-order-status.s-entregado { background:rgba(34,197,94,0.18); color:#22c55e; }
+.bbq-order-status.s-cancelado { background:rgba(239,68,68,0.15); color:#ef4444; }
+.bbq-order-status.s-enviado, .bbq-order-status.s-preparando, .bbq-order-status.s-confirmado { background:rgba(245,158,11,0.18); color:var(--wa-green); }
+.bbq-order-items { font-size:0.8rem; color:var(--wa-text-secondary); margin-bottom:4px; }
+.bbq-order-total { font-size:0.8rem; font-weight:700; }
+.bbq-order-steps { display:flex; gap:4px; margin-top:8px; }
+.bbq-order-steps span { flex:1; height:4px; border-radius:2px; background:var(--wa-border-light); }
+.bbq-order-steps span.on { background:var(--wa-green); }
+
+.bbq-safety-number { font:700 1.25rem/1.7 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:0.08em; text-align:center; background:var(--wa-dark-bg); border:1px solid var(--wa-border-light); border-radius:12px; padding:14px; word-spacing:0.4em; }
+/* Cabecera del chat: nombre y estado en una línea cada uno (nombres largos no se pisan) */
+.m-contact-details { min-width:0; flex:1; overflow:hidden; }
+.m-contact-name, .m-contact-status { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* ── Refinamiento 2026-10: avatares, menos ruido, tarjetas ── */
+.m-avatar .bbq-av-img { display:block; }
+.bbq-av, .bbq-av-img { width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:Inter,system-ui,sans-serif; letter-spacing:0.02em; font-size:1.05em; }
+.bbq-av-img { object-fit:cover; }
+.bbq-av-emoji { background:var(--wa-incoming-bg); font-size:1.3em; }
+.bbq-me-avatar .bbq-av { font-size:1.4rem; }
+/* La píldora de conexión solo aparece cuando hay un problema */
+.ws-connection-pill.conn-online { display:none; }
+@media (prefers-color-scheme: light) {
+    .bbq-order-card { background:rgba(0,0,0,0.035); }
+    .bottom-nav-btn.active .nav-label, .bottom-nav-btn.active .nav-icon { color:#c2410c; }
+}
+
+/* ==========================================================================
+   SOBRIO TIPO WHATSAPP (decisión 2026-10-07)
+   El naranja es solo ACENTO: color sólido, sin degradados, sin brillos ni bordes rojos.
+   La interfaz tiene que sentirse como WhatsApp para que el usuario se adapte rápido.
+   ========================================================================== */
+:root {
+    --bbq-accent: #f59e0b;            /* acento único */
+    --bbq-accent-ink: #1a1a1a;         /* texto sobre el acento */
+    --bbq-accent-soft: rgba(245, 158, 11, 0.16);   /* fondo de chips/pestaña activa */
+    --bbq-accent-text: #f59e0b;        /* texto en acento sobre fondo neutro */
+    --bbq-gradient-primary: var(--bbq-accent);
+    --wa-green-fab: var(--bbq-accent);
+}
+@media (prefers-color-scheme: light) {
+    :root { --bbq-accent-soft: rgba(234, 88, 12, 0.10); --bbq-accent-text: #c2410c; }
+}
+
+/* Botón flotante: cuadrado redondeado y sombra suave (como WhatsApp) */
+.mobile-fab { border:none !important; border-radius:16px !important; box-shadow:0 2px 6px rgba(0,0,0,0.3) !important; color:var(--bbq-accent-ink) !important; }
+/* Enviar / grabar y reproducir audio: sólidos, sin brillo */
+.m-send-btn, .voice-play-btn { border:none !important; box-shadow:none !important; background:var(--bbq-accent) !important; color:var(--bbq-accent-ink) !important; }
+/* Botones primarios: sólidos */
+.btn-wa-primary, .bbq-empty-btn { border:none !important; box-shadow:none !important; background:var(--bbq-accent) !important; color:var(--bbq-accent-ink) !important; }
+/* Chips de filtro: activo = fondo tenue + texto en acento (como los filtros de WhatsApp) */
+.filter-chip-pill.active { background:var(--bbq-accent-soft) !important; color:var(--bbq-accent-text) !important; border:1px solid transparent !important; box-shadow:none !important; }
+/* Segmento Tiendas | Entregas: igual que los chips */
+.bbq-segment-btn.active { background:var(--bbq-accent-soft); color:var(--bbq-accent-text); }
+/* Pestaña activa de la barra inferior: pastilla tenue */
+.bottom-nav-btn.active { background:var(--bbq-accent-soft) !important; }
+.bottom-nav-btn.active .nav-label, .bottom-nav-btn.active .nav-icon { color:var(--bbq-accent-text) !important; }
+/* Estados: anillo sólido (no degradado tipo Instagram) */
+.story-ring-store, .story-ring-contact { background:var(--bbq-accent) !important; }
+.story-ring-live { background:#ef4444 !important; }
+/* Tiendas de ejemplo: sin marquesina ni insignias estridentes */
+.store-marquee-ticker { background:var(--wa-dark-bg) !important; border-color:var(--wa-border-light) !important; }
+.badge-most-visited { background:var(--bbq-accent-soft) !important; color:var(--bbq-accent-text) !important; box-shadow:none !important; }
+/* Tarjeta de sello: tenue */
+.bbq-stamp-card { background:var(--bbq-accent-soft); }
+/* Cabecera del chat: el estado en gris, como WhatsApp */
+.m-contact-status { color:var(--wa-text-secondary) !important; }
+/* Interruptores de Modos (Yo) — estilo switch sobrio */
+.bbq-me-toggle { cursor:pointer; }
+.bbq-switch { appearance:none; -webkit-appearance:none; width:44px; height:26px; border-radius:13px; background:var(--wa-border-light); position:relative; flex:0 0 44px; cursor:pointer; transition:background .2s; margin:0; }
+.bbq-switch::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .2s; }
+.bbq-switch:checked { background:var(--bbq-accent); }
+.bbq-switch:checked::after { left:21px; }
+
+/* Aviso de versión nueva (actualización OTA de la PWA) */
+.bbq-update-banner { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 210000; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; border-radius: 10px; background: var(--wa-incoming-bg); color: var(--wa-text-primary); border: 1px solid var(--wa-border); box-shadow: 0 2px 8px rgba(0,0,0,.25); font-size: 14px; max-width: calc(100% - 32px); }
+.bbq-update-banner button { border: 0; border-radius: 8px; padding: 6px 12px; background: var(--bbq-accent); color: var(--bbq-accent-ink); font-weight: 600; cursor: pointer; }

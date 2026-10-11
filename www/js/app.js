@@ -21,10 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMobileDetection();
     registerServiceWorker();
 
-    // Trigger Automatic Daily Referral Pop-up on launch
-    setTimeout(() => {
-        initDailyReferralPopup();
-    }, 600);
+    // (El popup de referidos ya no se abre solo: el programa vive en Yo → Referidos.)
 
     // Arrancar el sistema P2P real: identidad del dispositivo + contactos + WebRTC.
     // (Reemplaza el viejo WS-relay. La señalización P2P la maneja BBQNet.)
@@ -36,11 +33,31 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ==========================================================================
    0. SERVICE WORKER REGISTRATION & PWA INSTALL
    ========================================================================== */
+function showUpdateBanner() {
+    if (document.getElementById('bbqUpdateBanner')) return;
+    const b = document.createElement('div');
+    b.id = 'bbqUpdateBanner';
+    b.className = 'bbq-update-banner';
+    b.innerHTML = '<span>Hay una versión nueva de BBQ</span><button type="button">Actualizar</button>';
+    b.querySelector('button').onclick = () => location.reload();
+    document.body.appendChild(b);
+}
+
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
+        // Actualización OTA: si había una versión anterior controlando la página, el SW nuevo
+        // toma el control (skipWaiting + claim) y se ofrece recargar, sin cortar lo que el usuario está haciendo.
+        const hadController = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (hadController) showUpdateBanner();
+        });
         navigator.serviceWorker.register('/sw.js')
             .then(reg => {
                 console.log('[PWA] Service Worker registrado:', reg.scope);
+                // Buscar versión nueva al volver a la app y cada 30 min si queda abierta.
+                const check = () => reg.update().catch(() => {});
+                document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+                setInterval(check, 30 * 60 * 1000);
             })
             .catch(err => {
                 console.warn('[PWA] Service Worker no registrado:', err);
@@ -135,8 +152,8 @@ function showInAppNotification(payload) {
     const notif = document.createElement('div');
     notif.className = 'in-app-notification';
     notif.innerHTML = `
-        <div style="font-weight:700; font-size:0.85rem;">${name}</div>
-        <div style="font-size:0.78rem; opacity:0.8;">${text.substring(0, 50)}</div>
+        <div style="font-weight:700; font-size:0.85rem;">${escHtml(name)}</div>
+        <div style="font-size:0.78rem; opacity:0.8;">${escHtml(String(text).substring(0, 50))}</div>
     `;
     notif.onclick = () => {
         selectMobileChat(payload.senderId);
@@ -404,8 +421,9 @@ function selectMobileChat(chatId) {
     if (!contact) return;
 
     document.getElementById('mActiveName').textContent = contact.name;
-    document.getElementById('mActiveAvatar').textContent = contact.avatar;
-    document.getElementById('mActiveStatus').textContent = contact.status;
+    document.getElementById('mActiveAvatar').innerHTML = bbqAvatar(chatId, contact.name, contact.avatar);
+    const e2eOn = !!(window.BBQE2E && window.BBQE2E.knows(chatId));
+    document.getElementById('mActiveStatus').textContent = (e2eOn ? '🔒 Cifrado · ' : '') + (contact.status || '');
 
     renderMobileMessages();
     openMobileChatScreen();
@@ -493,20 +511,20 @@ function renderMobileChatList() {
         const lastMsg = messages.length > 0 ? messages[messages.length - 1] : { text: 'Iniciar chat P2P cifrado', timestamp: Date.now() };
 
         return `
-            <div class="m-chat-item" onclick="selectMobileChat('${id}')">
+            <div class="m-chat-item" onclick="selectMobileChat('${safeId(id)}')">
                 <div class="m-avatar">
-                    ${c.avatar}
-                    <div class="online-dot"></div>
+                    ${bbqAvatar(id, c.name, c.avatar)}
+                    ${/en línea/.test(c.status || '') ? '<div class="online-dot"></div>' : ''}
                 </div>
                 <div class="m-chat-details">
                     <div class="m-chat-top">
-                        <div class="m-chat-name">${c.name}</div>
+                        <div class="m-chat-name">${escHtml(c.name)}</div>
                         <div class="m-chat-time">${formatTime(lastMsg.timestamp)}</div>
                     </div>
                     <div class="m-chat-bottom">
                         <div class="m-last-msg">
                             <span class="wa-tick read">✓✓</span>
-                            <span>${truncateText(lastMsg.text, 30)}</span>
+                            <span>${escHtml(truncateText(lastMsg.text, 30))}</span>
                         </div>
                         ${id === 'p2p_store_techzone' ? '<div class="m-unread-pill">1</div>' : ''}
                     </div>
@@ -536,7 +554,9 @@ function renderMobileMessages() {
     if (messages.length === 0) {
         html += `
             <div style="text-align:center; margin:15px 0; color:var(--wa-text-secondary); font-size:0.78rem;">
-                🔒 Chat P2P cifrado directamente entre terminales móviles.
+                ${(window.BBQE2E && window.BBQE2E.knows(currentChatId))
+                    ? '🔒 Cifrado de extremo a extremo: ni el servidor puede leer estos mensajes.'
+                    : '⚠️ Este chat no está cifrado de extremo a extremo (bot, agente o contacto sin claves).'}
             </div>
         `;
     }
@@ -549,10 +569,10 @@ function renderMobileMessages() {
             <div class="wa-msg-row ${isOutgoing ? 'outgoing' : 'incoming'} ${isAi ? 'ai-msg' : ''}">
                 <div class="wa-msg-bubble">
                     ${isAi ? '<div class="msg-author-tag">⚡ IA Local Tienda</div>' : ''}
-                    <div>${m.text}</div>
+                    ${(m.payloadCard && ['order_update', 'stamp'].includes(m.payloadCard.type)) ? '' : `<div>${escHtml(m.text)}</div>`}
                     ${m.payloadCard ? renderPayloadCard(m.payloadCard) : ''}
                     <div class="msg-footer-meta">
-                        ${(m.text && !m.payloadCard) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
+                        ${(m.text && !m.payloadCard && !isOutgoing && isAi) ? `<button onclick="window.BBQTTS && window.BBQTTS.speak(this.getAttribute('data-tts'))" data-tts="${escAttr(m.text)}" title="Escuchar" style="background:none; border:none; color:var(--wa-tick-gray); cursor:pointer; font-size:0.72rem; padding:0 4px;">🔊</button>` : ''}
                         <span class="msg-timestamp">${formatTime(m.timestamp)}</span>
                         ${isOutgoing ? (m.status === 'pending' ? '<span class="wa-tick" style="color:var(--wa-tick-gray);" title="Esperando que el contacto se conecte">⏳</span>' : '<span class="wa-tick read">✓✓</span>') : ''}
                     </div>
@@ -566,14 +586,28 @@ function renderMobileMessages() {
     hydrateAttachments(); // cargar imágenes/archivos desde IndexedDB
 }
 
-function renderPayloadCard(card) {
+// Literal JS seguro para meter dentro de un atributo onclick="...".
+function jsArg(v) { return escHtml(JSON.stringify(String(v == null ? '' : v))); }
+
+function renderPayloadCard(rawCard) {
+    // La tarjeta puede venir de otro peer: normalizar tipos y escapar antes de pintar.
+    const num = (v) => { const n = Number(v); return isFinite(n) ? n : 0; };
+    const card = Object.assign({}, rawCard, {
+        id: safeId(rawCard.id),
+        total: num(rawCard.total),
+        productPrice: num(rawCard.productPrice),
+        shippingFee: num(rawCard.shippingFee),
+        deliveryMode: rawCard.deliveryMode === 'PICKUP' ? 'PICKUP' : 'COURIER',
+        concept: String(rawCard.concept == null ? '' : rawCard.concept)
+    });
     if (card.type === 'image') {
         return `<img data-att="${card.id}" style="max-width:220px; max-height:280px; border-radius:10px; margin-top:6px; cursor:pointer; display:block; background:#0000001a;" onclick="openImageAttachment('${card.id}')">`;
     }
     if (card.type === 'file') {
         const kb = card.size ? Math.max(1, Math.round(card.size / 1024)) : '';
-        const safeName = (card.name || 'Documento').replace(/'/g, '').replace(/"/g, '');
-        return `<div data-att="${card.id}" onclick="downloadAttachment('${card.id}','${safeName}')" style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.25); border:1px solid var(--wa-border); border-radius:10px; padding:10px; margin-top:6px; cursor:pointer;">
+        const fileName = String(card.name || 'Documento');
+        const safeName = escHtml(fileName);
+        return `<div data-att="${card.id}" onclick="downloadAttachment('${card.id}',${jsArg(fileName)})" style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.25); border:1px solid var(--wa-border); border-radius:10px; padding:10px; margin-top:6px; cursor:pointer;">
             <i class="bi bi-file-earmark-arrow-down" style="font-size:1.6rem; color:var(--wa-green);"></i>
             <div><div style="font-size:0.82rem; font-weight:600;">${safeName}</div><div style="font-size:0.7rem; color:var(--wa-text-secondary);">${kb} KB · Tocar para descargar</div></div>
         </div>`;
@@ -607,13 +641,13 @@ function renderPayloadCard(card) {
                         ${isPaid ? 'Google Pay OK' : 'Pendiente Pago'}
                     </span>
                 </div>
-                <div style="font-size:0.85rem; font-weight:bold; color:var(--wa-text-primary); margin-bottom:2px;">${card.concept}</div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--wa-text-primary); margin-bottom:2px;">${escHtml(card.concept)}</div>
                 <div style="font-size:0.95rem; font-weight:900; color:#38bdf8; margin-bottom:4px;">$${card.total.toFixed(2)} USD</div>
                 <div style="font-size:0.7rem; color:var(--wa-text-secondary); margin-bottom:8px;">
                     ${isPickup ? '🏪 Retiro en Local ($0 Envío)' : '🚚 Envío Courier (+$' + card.shippingFee.toFixed(2) + ')'}
                 </div>
                 ${!isPaid ? `
-                    <button class="btn-wa-primary" style="width:100%; font-size:0.8rem; padding:8px; display:flex; align-items:center; justify-content:center; gap:6px; background:#ffffff; color:#0f172a; border:none; font-weight:900;" onclick="handlePayMerchantInvoice('${card.id}', ${card.total}, '${card.concept.replace(/'/g, "\\'")}', '${card.deliveryMode}')">
+                    <button class="btn-wa-primary" style="width:100%; font-size:0.8rem; padding:8px; display:flex; align-items:center; justify-content:center; gap:6px; background:#ffffff; color:#0f172a; border:none; font-weight:900;" onclick="handlePayMerchantInvoice('${card.id}', ${card.total}, ${jsArg(card.concept)}, '${card.deliveryMode}')">
                         <span style="font-weight:900; background:linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:0.95rem;">GPay</span>
                         <span>Pagar $${card.total.toFixed(2)} USD</span>
                     </button>
@@ -624,6 +658,24 @@ function renderPayloadCard(card) {
                 `}
             </div>
         `;
+    } else if (card.type === 'stamp') {
+        // Sello de fidelidad firmado por la tienda (verificado al recibir; ver loyalty.js).
+        const n = Math.max(0, Number(card.n) || 0), need = Math.max(1, Number(card.needed) || 1);
+        const dots = Array.from({ length: Math.min(need, 20) }, (_, i) => `<span class="bbq-stamp-dot ${i < n ? 'on' : ''}"></span>`).join('');
+        return `<div class="bbq-stamp-card ${card.invalid ? 'invalid' : ''}">
+            <div class="bbq-stamp-head">🎟️ ${escHtml(card.storeName || 'Tienda')} <span>${n}/${need}</span></div>
+            <div class="bbq-stamp-dots">${dots}</div>
+            <div class="bbq-stamp-reward">${card.invalid ? '⚠️ Sello no válido (firma incorrecta)' : (n >= need ? '🎁 ' : 'Premio: ') + escHtml(card.reward || '')}</div>
+        </div>`;
+    } else if (card.type === 'order_update') {
+        const st = String(card.status || '');
+        const label = (window.BBQOrders && window.BBQOrders.LABEL[st]) || escHtml(st);
+        const items = Array.isArray(card.items) ? card.items.slice(0, 6).map(it => `${escHtml(it.qty)}× ${escHtml(it.name)}`).join(' · ') : '';
+        return `<div class="bbq-order-card">
+            <div class="bbq-order-head">🧾 Pedido ${escHtml(String(card.id || '').slice(-6))} <span class="bbq-order-status s-${escHtml(st)}">${label}</span></div>
+            <div class="bbq-order-items">${items}</div>
+            <div class="bbq-order-total">Total: $${card.total.toFixed(2)} · ${escHtml(card.storeName || '')}</div>
+        </div>`;
     } else if (card.type === 'voice_note') {
         return `
             <div class="voice-note-bubble-card">
@@ -641,7 +693,7 @@ function renderPayloadCard(card) {
                         <div class="voice-wave-bar" style="height:70%;"></div>
                     </div>
                     <div style="font-size:0.72rem; color:var(--wa-text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                        <span>🎤 Nota de voz (${card.durationStr || '00:04'})</span>
+                        <span>🎤 Nota de voz (${escHtml(card.durationStr || '00:04')})</span>
                         <button onclick="transcribeVoiceNote('${card.id}')" title="Transcribir" style="background:none; border:none; color:var(--wa-green); cursor:pointer; font-size:0.72rem; padding:0 4px;">📝</button>
                     </div>
                     <div id="vnText_${card.id}" style="font-size:0.75rem; color:var(--wa-text-primary); margin-top:4px;"></div>
@@ -680,12 +732,14 @@ function sendMessage(textOverride = null) {
     if (activeContact && activeContact.isReal) {
         const cid = currentChatId;
         const isAgent = typeof cid === 'string' && cid.indexOf('agent_') === 0;
+        // Agentes y bots no mandan ACK: su mensaje queda "enviado" directo (sin ⏳ eterno).
+        const noAck = isAgent || cid === 'bbq_testbot' || cid === 'bbq_claude';
         const msg = {
             id: 'm_' + Date.now(),
             sender: window.MY_PEER_ID,
             text: text,
             timestamp: new Date().toISOString(),
-            status: isAgent ? 'sent' : 'pending' // humano: ⏳ hasta el ACK; agente: directo
+            status: noAck ? 'sent' : 'pending' // humano: ⏳ hasta el ACK; agente/bot: directo
         };
         window.buyerStorage.appendChatMessage(cid, msg);
         renderMobileMessages();
@@ -804,24 +858,28 @@ async function handleAttachmentFile(file) {
         const card = isImage
             ? { type: 'image', id: attId }
             : { type: 'file', id: attId, name: file.name, size: file.size, mime: file.type };
+        const willSend = !!(contact && contact.isReal && window.BBQNet);
         const msg = {
             id: 'msg_' + Date.now(),
             sender: window.MY_PEER_ID || 'me',
             text: isImage ? '📷 Foto' : ('📄 ' + file.name),
             timestamp: new Date().toISOString(),
-            payloadCard: card
+            payloadCard: card,
+            status: willSend ? 'pending' : 'sent' // ⏳ hasta el ACK, como el texto
         };
         window.buyerStorage.appendChatMessage(chatId, msg);
         renderMobileMessages();
         renderMobileChatList();
         // Enviar P2P (bytes en base64) al contacto real.
-        if (contact && contact.isReal && window.BBQNet) {
-            if (dataUrl.length > 1200000) {
-                if (window.bbqToast) window.bbqToast('Archivo muy grande para enviar por P2P');
+        if (willSend) {
+            // ~4,5 MB de archivo (en base64 y cifrado sigue entrando en el límite del relay).
+            if (dataUrl.length > 6000000) {
+                if (window.bbqToast) window.bbqToast('Archivo muy grande (máx. ~4 MB)');
             } else {
-                window.BBQNet.send(chatId, { type: 'attachment', message: msg, data: dataUrl }).then(r => {
-                    if (!r.ok && window.bbqToast) window.bbqToast('⚠️ No entregado (contacto offline)');
-                });
+                // Por el outbox: si el contacto está desconectado, se entrega cuando vuelva (⏳ → ✓✓).
+                const payload = { type: 'attachment', message: msg, data: dataUrl };
+                if (window.BBQ && window.BBQ.outboxAdd) await window.BBQ.outboxAdd(chatId, payload);
+                window.BBQNet.send(chatId, payload);
             }
         }
     };
@@ -914,9 +972,11 @@ function compressDataURL(dataURL, maxDim = 512, quality = 0.8) {
 
 function loadProfileData() {
     const p = window.buyerStorage.getUserProfile();
+    // Nombre y número reales vienen de la identidad registrada en el onboarding.
+    const idp = (window.BBQIdentity && window.BBQIdentity.getProfile && window.BBQIdentity.getProfile()) || {};
     if (p) {
-        if (document.getElementById('profileInputName')) document.getElementById('profileInputName').value = p.name || '';
-        if (document.getElementById('profileInputPhone')) document.getElementById('profileInputPhone').value = p.phone || '';
+        if (document.getElementById('profileInputName')) document.getElementById('profileInputName').value = idp.name || p.name || '';
+        if (document.getElementById('profileInputPhone')) document.getElementById('profileInputPhone').value = idp.phone || p.phone || '';
 
         const avatarDisplay = document.getElementById('profileAvatarDisplay');
         if (avatarDisplay) {
@@ -992,12 +1052,18 @@ function handleSaveStore() {
 
 function loadStoreData() {
     const s = window.merchantStorage.getUserStore();
-    if (s && document.getElementById('storeInputName')) {
-        document.getElementById('storeInputName').value = s.name || 'TechZone Store';
-        if (s.courierPartner && document.getElementById('storeInputCourierPartner')) {
-            document.getElementById('storeInputCourierPartner').value = s.courierPartner;
-        }
-    }
+    if (!s || !document.getElementById('storeInputName')) return;
+    document.getElementById('storeInputName').value = s.name || '';
+    // En los <select>, si el valor guardado no es una opción de la lista, se agrega para no perderlo.
+    const setSel = (id, v) => {
+        const el = document.getElementById(id);
+        if (!el || !v) return;
+        if (![...el.options].some(o => o.value === v)) { const o = document.createElement('option'); o.value = v; o.textContent = v; el.appendChild(o); }
+        el.value = v;
+    };
+    setSel('storeInputCategory', s.category);
+    setSel('storeInputRegion', s.region);
+    setSel('storeInputCourierPartner', s.courierPartner);
 }
 
 function handleSaveAiSetup() {
@@ -1138,6 +1204,7 @@ function openModal(modalId) {
             label.textContent = isPickup ? '🔒 Retención Auth & Hold (🏪 Retiro en Tienda - $0 Envío)' : '🔒 Retención Auth & Hold (🚚 Envío por Courier)';
         }
     } else if (modalId === 'modalCreateStore') {
+        loadStoreData();
         renderMerchantWallet();
     } else if (modalId === 'modalCreateStatus') {
         populateStatusProductsDropdowns();
@@ -1602,8 +1669,10 @@ function switchMobileTab(tabName) {
     const storesSection = document.getElementById('viewStoresSection');
     const callsSection = document.getElementById('viewCallsSection');
     const communitySection = document.getElementById('viewCommunitySection');
+    const meSection = document.getElementById('viewMeSection');
 
     // Hide all views
+    if (meSection) meSection.style.display = 'none';
     if (chatsSection) chatsSection.style.display = 'none';
     if (updatesSection) updatesSection.style.display = 'none';
     if (storesSection) storesSection.style.display = 'none';
@@ -1622,7 +1691,8 @@ function switchMobileTab(tabName) {
         'updates': '<i class="bi bi-circle-square"></i> Estados',
         'stores': '<i class="bi bi-shop"></i> Tiendas P2P',
         'community': '<i class="bi bi-people-fill"></i> Comunidad',
-        'profile': '<i class="bi bi-person-circle"></i> Perfil'
+        'profile': '<i class="bi bi-person-circle"></i> Perfil',
+        'me': '<i class="bi bi-person-circle"></i> Yo'
     };
     if (selectedTabBadge && badges[tabName]) {
         selectedTabBadge.innerHTML = badges[tabName];
@@ -1644,6 +1714,9 @@ function switchMobileTab(tabName) {
     } else if (tabName === 'community') {
         if (communitySection) communitySection.style.display = 'block';
         renderCommunitySection();
+    } else if (tabName === 'me') {
+        if (meSection) meSection.style.display = 'block';
+        if (window.BBQUX) window.BBQUX.renderMe();
     }
 
     updateFabIcon(tabName);
@@ -1821,7 +1894,7 @@ function initInstagramStoriesBar() {
         <!-- Mi Historia bubble -->
         <div class="story-item-bubble" onclick="openModal('modalCreateStatus')">
             <div class="story-avatar-container story-ring-none">
-                <div class="story-avatar-img">${userProfile.avatar || '👤'}</div>
+                <div class="story-avatar-img">${bbqAvatar(window.MY_PEER_ID, (window.BBQIdentity && window.BBQIdentity.getProfile() || {}).name, userProfile.avatar)}</div>
                 <div class="story-add-badge">+</div>
             </div>
             <span class="story-label font-inter-light">Tu estado</span>
@@ -1835,11 +1908,11 @@ function initInstagramStoriesBar() {
         const h = liveHosts[hostId];
         const nombre = (h.hostName || 'En vivo').split(' ')[0];
         html += `
-            <div class="story-item-bubble" onclick="openLiveViewer('${hostId}')">
+            <div class="story-item-bubble" onclick="openLiveViewer('${safeId(hostId)}')">
                 <div class="story-avatar-container story-ring-live">
                     <div class="story-avatar-img">📹</div>
                 </div>
-                <span class="story-label font-inter-black text-danger">🔴 ${nombre}</span>
+                <span class="story-label font-inter-black text-danger">🔴 ${escHtml(nombre)}</span>
             </div>
         `;
     });
@@ -2239,7 +2312,7 @@ function handleLiveSearchFilter() {
 }
 
 function formatTime(timestamp) {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function truncateText(text, length) {
@@ -2278,7 +2351,7 @@ function updateFabIcon(tabName) {
     if (!fab) return;
 
     const icons = {
-        'chats': '<i class="bi bi-chat-plus-fill"></i>',
+        'chats': '<i class="bi bi-pencil-square"></i>',
         'calls': '<i class="bi bi-telephone-plus-fill"></i>',
         'updates': '<i class="bi bi-camera-fill"></i>',
         'stores': '<i class="bi bi-shop"></i>',
@@ -2287,6 +2360,8 @@ function updateFabIcon(tabName) {
     };
 
     fab.innerHTML = icons[tabName] || '<i class="bi bi-plus-lg"></i>';
+    // En "Yo" no hay acción flotante: todo está en la lista.
+    fab.style.display = (tabName === 'me' || tabName === 'community') ? 'none' : '';
 }
 
 function renderContactPicker(mode = 'chat') {
@@ -2298,7 +2373,7 @@ function renderContactPicker(mode = 'chat') {
 
     if (titleEl) {
         titleEl.innerHTML = mode === 'chat' ? 
-            '<i class="bi bi-chat-plus-fill text-success"></i> Iniciar Nuevo Chat P2P' : 
+            '<i class="bi bi-pencil-square text-success"></i> Nuevo chat' : 
             '<i class="bi bi-telephone-plus-fill text-info"></i> Iniciar Llamada P2P';
     }
 
@@ -2314,13 +2389,13 @@ function renderContactPicker(mode = 'chat') {
         return `
             <div class="wa-store-card" style="margin-bottom:8px;">
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <div style="font-size:1.6rem;">${c.avatar}</div>
+                    <div class="m-avatar" style="width:42px;height:42px;">${bbqAvatar(id, c.name, c.avatar)}</div>
                     <div>
-                        <div class="font-inter-black" style="font-size:0.9rem;">${c.name}</div>
-                        <div class="font-inter-light" style="font-size:0.72rem; color:var(--wa-text-secondary);">${c.status}</div>
+                        <div class="font-inter-black" style="font-size:0.9rem;">${escHtml(c.name)}</div>
+                        <div class="font-inter-light" style="font-size:0.72rem; color:var(--wa-text-secondary);">${escHtml(c.status)}</div>
                     </div>
                 </div>
-                <button class="btn-wa-primary" style="padding:5px 12px; font-size:0.75rem;" onclick="handleContactPickerSelect('${id}', '${mode}')">
+                <button class="btn-wa-primary" style="padding:5px 12px; font-size:0.75rem;" onclick="handleContactPickerSelect('${safeId(id)}', '${mode}')">
                     ${mode === 'chat' ? '💬 Chat' : '📞 Llamar'}
                 </button>
             </div>
@@ -2450,18 +2525,24 @@ function renderCallsSection() {
         return;
     }
 
-    container.innerHTML = calls.map(c => `
+    const typeLabel = { incoming: 'Entrante', outgoing: 'Saliente', missed: 'Perdida', declined: 'Rechazada' };
+    const dur = (s) => s ? ` · ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '';
+    container.innerHTML = calls.map(c => {
+        const name = (CONTACTS_DATA[c.contactId] && CONTACTS_DATA[c.contactId].name) || c.contactName || 'Contacto';
+        const color = (c.type === 'missed') ? '#ef4444' : 'var(--wa-text-secondary)';
+        const arrow = c.type === 'outgoing' ? 'up-right' : 'down-left';
+        return `
         <div class="call-log-item">
-            <div class="call-avatar">${c.contactAvatar || '👤'}</div>
+            <div class="m-avatar" style="width:44px;height:44px;">${bbqAvatar(c.contactId, name, c.contactAvatar)}</div>
             <div class="call-info">
-                <div class="font-inter-black" style="font-size:0.9rem;">${c.contactName}</div>
-                <div class="font-inter-light" style="font-size:0.75rem; color:${c.type === 'incoming' ? 'var(--wa-green)' : 'var(--wa-text-secondary)'};">
-                    <i class="bi bi-arrow-${c.type === 'incoming' ? 'down-left' : 'up-right'}"></i> ${c.type === 'incoming' ? 'Entrante' : 'Saliente'} (${formatTime(c.timestamp)})
+                <div class="font-inter-black" style="font-size:0.9rem;">${escHtml(name)}</div>
+                <div class="font-inter-light" style="font-size:0.75rem; color:${color};">
+                    <i class="bi bi-arrow-${arrow}"></i> ${typeLabel[c.type] || ''}${c.video ? ' · video' : ''}${dur(c.duration)} · ${formatTime(c.timestamp)}
                 </div>
             </div>
-            <button class="btn-call-action" onclick="alert('📞 Llamando a ${c.contactName} por P2P...')"><i class="bi bi-telephone-out-fill"></i></button>
-        </div>
-    `).join('');
+            <button class="btn-call-action" aria-label="Llamar" onclick="window.BBQCall && window.BBQCall.startCall('${safeId(c.contactId)}', ${c.video ? 'true' : 'false'})"><i class="bi bi-telephone-outbound-fill"></i></button>
+        </div>`;
+    }).join('');
 }
 
 function renderCommunitySection() {
@@ -2730,24 +2811,28 @@ async function finalizeVoiceRecording() {
     try { await window.BBQDB.set('messages', vnId, blob); } catch (e) {}
     bbqVoiceURLs[vnId] = URL.createObjectURL(blob);
 
+    const vContact = CONTACTS_DATA[currentChatId];
+    const vWillSend = !!(vContact && vContact.isReal && window.BBQNet);
     const msgObj = {
         id: 'msg_' + Date.now(),
         sender: window.MY_PEER_ID || 'me',
         text: `🎤 Nota de voz (${durationStr})`,
         timestamp: new Date().toISOString(),
-        payloadCard: { type: 'voice_note', id: vnId, durationStr: durationStr }
+        payloadCard: { type: 'voice_note', id: vnId, durationStr: durationStr },
+        status: vWillSend ? 'pending' : 'sent'
     };
     window.buyerStorage.appendChatMessage(currentChatId, msgObj);
     renderMobileMessages();
     renderMobileChatList();
 
     // Enviar por P2P al contacto real (audio en base64 por el DataChannel).
-    const contact = CONTACTS_DATA[currentChatId];
-    if (contact && contact.isReal && window.BBQNet) {
+    if (vWillSend) {
+        const cid = currentChatId;
         const b64 = await bbqBlobToBase64(blob);
-        window.BBQNet.send(currentChatId, { type: 'voice', message: msgObj, audio: b64 }).then(r => {
-            if (!r.ok && window.bbqToast) window.bbqToast('⚠️ Nota no entregada (contacto offline)');
-        });
+        // Por el outbox: si el contacto está desconectado, la nota se entrega cuando vuelva.
+        const payload = { type: 'voice', message: msgObj, audio: b64 };
+        if (window.BBQ && window.BBQ.outboxAdd) await window.BBQ.outboxAdd(cid, payload);
+        window.BBQNet.send(cid, payload);
     }
 }
 

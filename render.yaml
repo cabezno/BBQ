@@ -12,3 +12,13 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      # Persistencia del directorio (sin esto se borra en cada deploy). Se cargan a mano en Render.
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      # TURN para llamadas/P2P en redes que no conectan directo (opcional). Ver /api/ice-servers en server.js.
+      - key: TURN_URLS
+        sync: false
+      - key: TURN_SECRET
+        sync: false
