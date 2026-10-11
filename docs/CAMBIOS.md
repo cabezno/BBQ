@@ -4,6 +4,12 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — Vía 4: validar la tarjeta por NFC y cobrar por camino aprobado
+- **Qué:** fila nueva en la tabla de vías de cobro en `docs/MODELO-NEGOCIO.md`. El NFC se usa para validar la tarjeta (posesión, autenticidad offline del chip, coincidencia con la tarjeta del cobro y nombre) y el cobro va por Google Pay, 3-D Secure o MOTO.
+- **Por qué:** el dueño prefiere que la tarjeta se escanee para validarla.
+- **Cómo se probó:** solo documentación.
+- **Pendiente:** prototipo nativo de lectura de tarjeta y documento por NFC, sin cobrar, para ver qué devuelven las tarjetas y la cédula uruguayas.
+
 ## 2026-10-11 — La vía 3 (lectura y cobro directo por NFC) pasa a "en exploración"
 - **Qué:**
   - En `docs/MODELO-NEGOCIO.md`, la vía 3 se reescribe como cobro MOTO / tarjeta no presente en la cuenta del vendedor, con tokenización inmediata, el paquete de pruebas y Visa Compelling Evidence 3.0.

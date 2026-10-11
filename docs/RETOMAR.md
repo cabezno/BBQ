@@ -15,7 +15,7 @@
 - **Decisión del 11/10 (b):**
   - cada vendedor cobra en su propia cuenta y BBQ orquesta la captura;
   - la compra se firma con identidad digital;
-  - tabla de vías de cobro por NFC: SoftPOS certificado, NFC para leer más 3-D Secure, y cobro directo sin certificación (en exploración, como MOTO / tarjeta no presente).
+  - tabla de vías de cobro por NFC: SoftPOS certificado, NFC para leer más 3-D Secure, y cobro directo sin certificación (en exploración, como MOTO / tarjeta no presente). **Vía 4 preferida:** validar la tarjeta por NFC (posesión, autenticidad y titular) y cobrar por camino aprobado. Próximo paso sugerido: prototipo nativo que lea tarjeta y documento por NFC, sin cobrar.
 
 ## Para probar en Render
 Mergear el PR (o apuntar Render a la rama) y cargar las variables de Upstash.
