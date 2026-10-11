@@ -4,6 +4,17 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — Decisión: contrato de compraventa firmado por compra
+- **Qué:**
+  - Sección nueva en `docs/MODELO-NEGOCIO.md` con las piezas: identidad, rostro on-device, tarjeta validada, plantilla de contrato, firma, cobro y guardado. Incluye por qué, límites y qué hay que confirmar.
+  - Pregunta 10 para el abogado en `docs/MODELO-PAGOS-Y-ENTREGAS.md`.
+  - `CLAUDE.md` y `docs/RETOMAR.md` actualizados.
+- **Por qué:** el dueño lo considera la vía más sólida para evitar fraude y falsos reclamos, sin burocracia ni intermediario.
+- **Cómo se probó:** solo documentación.
+- **Pendiente:**
+  - consultas a Agesic y al abogado;
+  - prototipo nativo: lectura de documento y tarjeta por NFC, selfie contra la foto del chip y firma del contrato con la clave de la app.
+
 ## 2026-10-11 — Vía 4: validar la tarjeta por NFC y cobrar por camino aprobado
 - **Qué:** fila nueva en la tabla de vías de cobro en `docs/MODELO-NEGOCIO.md`. El NFC se usa para validar la tarjeta (posesión, autenticidad offline del chip, coincidencia con la tarjeta del cobro y nombre) y el cobro va por Google Pay, 3-D Secure o MOTO.
 - **Por qué:** el dueño prefiere que la tarjeta se escanee para validarla.

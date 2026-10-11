@@ -390,6 +390,7 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 7. **Decisión del 2026-10-11:** se exige identidad verificada con el chip del documento para comprar, vender o repartir. ¿Qué obligaciones trae (Ley 18.331, prevención de lavado)? ¿Alcanza con guardar solo "verificado" más un hash en el servidor?
 8. **Decisión del 2026-10-11 (b):** cada vendedor cobra en su propia cuenta y BBQ solo orquesta la captura y cobra comisión por split. ¿BBQ igual tiene que registrarse como PSPC? ¿Qué responsabilidad le queda ante el consumidor?
 9. Compra firmada con la cédula (firma electrónica avanzada, Ley 18.600) o con la clave de la app: ¿qué valor probatorio tiene cada una? ¿Agesic permite firmar con la cédula desde el celular por NFC?
+10. **Decisión del 2026-10-11 (c):** contrato de compraventa electrónico por compra, firmado por las partes (firma avanzada con la cédula y validación facial). ¿Qué validez tiene? ¿Sostiene que las disputas se resuelvan entre las partes? ¿Qué cláusulas mínimas exige la Ley 17.250?
 
 **Contador:**
 1. IVA e IRAE en cada esquema (intermediario vs comisionista / venta por cuenta ajena).

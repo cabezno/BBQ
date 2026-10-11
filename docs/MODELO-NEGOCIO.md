@@ -135,6 +135,41 @@ El vendedor lo presenta ante un contracargo, y también es el respaldo de las pa
 - **Google Pay en la app:** mismo camino que la vía 2 (token y procesador), con autorización y captura diferida.
 - **Factura de servicios a nombre del titular:** prueba de domicilio para "conocer al cliente". Se pide para subir límites, pasar a Comercio y para quien cobra (vendedores y cadetes). No requiere IA: puede ser una revisión manual.
 
+## Decisión del dueño (2026-10-11, c): contrato de compraventa firmado por compra
+> "Es la vía más sólida, la que evita fraude y que haya falsos reclamos."
+
+**Idea:** cada compra genera un **contrato** entre comprador y vendedor (y el cadete si hay envío), firmado por las partes. BBQ es la herramienta con la que las partes celebran su propio contrato: no es parte ni árbitro.
+
+**Piezas:**
+1. **Identidad:** documento leído por NFC (chip firmado por el Estado).
+2. **Rostro:**
+   - selfie con prueba de vida, comparada **en el teléfono** con la foto del chip del documento (modelo chico on-device, no la IA del usuario: funciona sin saldo; la cara no sale del teléfono);
+   - alternativa con respaldo oficial: validación facial de Agesic / ID Uruguay si hay API para terceros (a confirmar).
+3. **Tarjeta:** validada por NFC (vía 4) y del mismo titular.
+4. **Contrato:** generado desde una plantilla por tipo de venta, con:
+   - partes verificadas;
+   - objeto, precio, plazo y forma de entrega;
+   - condición de pago (autorizar al firmar, capturar con el QR de entrega, cancelar al vencer);
+   - disputas entre las partes con respaldo de ambas.
+5. **Firma:**
+   - con la cédula: firma electrónica avanzada (Ley 18.600), equivalente a la de puño y letra;
+   - si no se puede, con la clave ECDSA de la app, atada a la identidad verificada y al rostro.
+6. **Cobro:** directo por NFC con SoftPOS certificado (vía 1) o con la vía 4. Siempre en la cuenta del vendedor, autorizado y capturado con el QR de entrega.
+7. **Guardado:** el contrato queda en los teléfonos de las partes, con el hash en el servidor como sello de fecha (opcional: sello de tiempo oficial).
+
+**Por qué:**
+- evita el fraude: identidad, rostro, tarjeta física auténtica y firma;
+- evita los falsos reclamos: contrato firmado más el QR de entrega;
+- evita la burocracia: sin escribano ni papeles ni un tercero que decida.
+
+**Límites conocidos:**
+- el contrato obliga a las partes, no a los bancos: el contracargo sigue existiendo, pero con pruebas muy fuertes en contra de un reclamo de mala fe;
+- los derechos del consumidor (Ley 17.250) no se pueden renunciar.
+
+**A confirmar:**
+- **Agesic:** API de validación facial y firma con cédula por NFC desde el celular.
+- **Abogado:** validez del contrato de compraventa electrónico con firma avanzada, y si sostiene la decisión de disputas entre las partes.
+
 ## Decisiones abiertas
 
 | Tema | Opciones | Lo que dice el estudio |
