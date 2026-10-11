@@ -409,6 +409,7 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 3. Requisitos, garantías, tasas y plazos de liquidación.
 4. ¿Ofrecen SoftPOS / Tap to Pay (el celular como posnet por NFC) en Uruguay? ¿Permiten preautorización en cobros sin contacto? ¿Aceptan tokens de Google Pay con captura diferida?
 5. ¿Ofrecen la consulta de nombre del titular (Visa/Mastercard Account Name Inquiry) o una forma de verificar que la tarjeta es de la persona verificada? ¿Y 3-D Secure en Uruguay?
+6. ¿Habilitan cobros MOTO / tarjeta no presente (sin código de seguridad) a cuentas de vendedores de un marketplace? ¿Con qué límites, tasas y requisitos? ¿Aceptan las pruebas de Visa "Compelling Evidence 3.0" en contracargos?
 
 ---
 

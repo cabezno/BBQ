@@ -4,6 +4,16 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — La vía 3 (lectura y cobro directo por NFC) pasa a "en exploración"
+- **Qué:**
+  - En `docs/MODELO-NEGOCIO.md`, la vía 3 se reescribe como cobro MOTO / tarjeta no presente en la cuenta del vendedor, con tokenización inmediata, el paquete de pruebas y Visa Compelling Evidence 3.0.
+  - Pregunta 6 nueva para los adquirentes en `docs/MODELO-PAGOS-Y-ENTREGAS.md` §9.
+- **Por qué:** el dueño considera que, con todo lo armado (identidad, titular, factura de servicios y compra firmada), la vía se puede hacer. Lo que falta es un adquirente que la habilite.
+- **Cómo se probó:** solo documentación.
+- **Pendiente:**
+  - consultar a los adquirentes por MOTO / tarjeta no presente;
+  - definir límites de monto iniciales.
+
 ## 2026-10-11 — Decisión: cada vendedor cobra en su cuenta, compra firmada y vías de cobro por NFC
 - **Qué:**
   - Nueva sección en `docs/MODELO-NEGOCIO.md` con:
