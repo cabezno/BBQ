@@ -228,6 +228,26 @@ El vendedor lo presenta ante un contracargo, y también es el respaldo de las pa
   - identidad verificada y contrato firmado.
 - **Cambia el estudio:** en el estudio, el crédito propio y el BNPL estaban descartados. Esta decisión los reabre, por la vía cooperativa.
 
+### D. Cómo se cobra cada cuota: capas de cobro (conversación del 11/10)
+**Requisitos para financiar:**
+- **Cuenta sueldo declarada y verificada:**
+  - recibo de sueldo y extracto con los créditos del empleador, revisados a mano (sin IA);
+  - historia laboral del BPS, compartida por el usuario.
+- **Tarjeta de crédito registrada,** validada por NFC (vía 4) y del mismo titular. Queda guardada como token en el procesador, nunca en BBQ, con verificación de $0 al firmar.
+- **Historial de crédito con consentimiento:** Central de Riesgos del BCU y Clearing de Informes. Sirve para fijar el límite.
+- **No se pueden averiguar las cuentas de una persona:** rige el secreto bancario. Solo se usa lo que la persona declara y prueba, y en un juicio el juez puede ordenar el embargo.
+
+**Orden de cobro, todo en el contrato firmado:**
+1. **Débito automático** de la cuenta sueldo el día de cobro. Lo ejecuta la cooperativa (o BBQ Pagos), con convenio de débito con los bancos o con una red de cobranza.
+2. Si falla: **cobro a la tarjeta de crédito registrada,** como cobro iniciado por el comercio con el consentimiento previo del contrato. La deuda pasa al banco emisor a tasa de tarjeta y el inversor cobra completo. No es garantía de cupo, así que conviene verificar con $0 antes de cada vencimiento, poner un tope sobre el límite declarado y exigir reemplazo si la tarjeta vence.
+3. Si falla: **retención de sueldo** (Ley 17.829), si la cooperativa está habilitada.
+4. Si falla: mora (recargos de tarjeta), **vencimiento de todo el plan** y **cobro judicial** con el contrato firmado, con embargo.
+
+**Cambio de cuenta sueldo:**
+- **Idea del dueño:** multa por cambiar de cuenta. A evaluar con el abogado, porque la Ley 19.210 le da al trabajador el derecho a elegir y cambiar la institución donde cobra, y la cláusula podría ser abusiva o nula.
+- **Alternativa:** obligación de **avisar y re-autorizar el débito** en la cuenta nueva dentro de X días. Si no, corre la mora y después vence todo el plan. Se sanciona no pagar, no cambiar de cuenta.
+- La misma obligación de aviso aplica si se cambia la tarjeta registrada.
+
 ## Decisiones abiertas
 
 | Tema | Opciones | Lo que dice el estudio |

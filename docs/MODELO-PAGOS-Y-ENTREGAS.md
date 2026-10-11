@@ -397,6 +397,11 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
     - ¿Está vigente la norma del BCU de plataformas de crowdlending y cubre consumo?
     - ¿Cuáles son los topes de usura vigentes (Ley 18.212) para el interés compensatorio y moratorio, si se cobran las mismas tasas que las tarjetas de crédito?
     - ¿Cómo se comunica el rendimiento a los inversores socios sin que sea oferta pública de valores?
+14. **Capas de cobro (11/10):**
+    - ¿Es válida una multa por cambiar de cuenta sueldo frente a la Ley 19.210, o conviene la obligación de aviso con vencimiento de todo el plan?
+    - ¿El débito automático se puede revocar sin aviso?
+    - ¿Cobrar a la tarjeta registrada, con consentimiento en el contrato, la cuota impaga, los recargos o el total vencido es válido?
+    - ¿Qué consentimiento hace falta para consultar la Central de Riesgos y el Clearing?
 13. **BBQ Pagos como facilitador (como MP):** requisitos y costos de PSPC y del contrato de facilitador; ¿se evita la figura de emisor de dinero electrónico liquidando directo a la caja de ahorro?
 
 **Contador:**

@@ -4,6 +4,20 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — Capas de cobro de la financiación: cuenta sueldo, tarjeta registrada, retención y cobro judicial
+- **Qué:**
+  - Subsección D en `docs/MODELO-NEGOCIO.md`:
+    - requisitos para financiar (cuenta sueldo verificada, tarjeta registrada como token, historial de crédito);
+    - el secreto bancario;
+    - el orden de cobro en 4 capas;
+    - el cambio de cuenta (la idea del dueño de multar, y la alternativa con aviso obligatorio).
+  - Pregunta 14 para el abogado.
+- **Por qué:** el dueño propuso exigir una cuenta sueldo con débito automático, sancionar el cambio de cuenta, y usar una tarjeta de crédito asociada como respaldo para que la deuda pase al banco emisor.
+- **Cómo se probó:** solo documentación.
+- **Pendiente:**
+  - definir el plazo de aviso, el porcentaje máximo sobre el límite de la tarjeta y los montos de mora;
+  - consultar al abogado (pregunta 14).
+
 ## 2026-10-11 — Financiación y cobro propio: facilitador como MP, retención de sueldo y crowdlending cooperativo
 - **Qué:**
   - Sección nueva en `docs/MODELO-NEGOCIO.md` con tres partes:
