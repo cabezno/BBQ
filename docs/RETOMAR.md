@@ -12,6 +12,10 @@
 - **Modelo de negocio:** el estudio completo está en `docs/MODELO-PAGOS-Y-ENTREGAS.md` y el resumen, cruzado con el código, en `docs/MODELO-NEGOCIO.md`.
 - **Decisión de disputas:** las resuelven comprador y vendedor, los dos ponen un respaldo y BBQ solo abre el canal.
 - **Decisión del 11/10:** identidad verificada con el chip del documento para comprar, vender o repartir; cobro con Google Pay o NFC, con autorización ahora y captura al entregar. Ver `docs/MODELO-NEGOCIO.md`.
+- **Decisión del 11/10 (b):**
+  - cada vendedor cobra en su propia cuenta y BBQ orquesta la captura;
+  - la compra se firma con identidad digital;
+  - tabla de vías de cobro por NFC: SoftPOS certificado, NFC para leer más 3-D Secure, y cobro directo sin certificación (descartado).
 
 ## Para probar en Render
 Mergear el PR (o apuntar Render a la rama) y cargar las variables de Upstash.

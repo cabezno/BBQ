@@ -11,7 +11,7 @@
 - P2P, servidor mínimo (directorio + señalización + relay ciego), libertad del usuario.
 - IA del usuario: API propia, on-device o vía su PC de escritorio. **Puede no haber IA** (sin saldo): todo tiene que seguir funcionando sin IA.
 - Comercio libre y seguro (escrow), sin intermediario que decida. Las disputas las resuelven comprador y vendedor, los dos ponen un respaldo para litigar, y BBQ solo abre el canal y se deslinda de lo que pase entre usuarios (ver `docs/MODELO-NEGOCIO.md`).
-- Chatear es libre. Para comprar, vender o repartir se exige identidad verificada con el chip del documento (en el teléfono; al server solo llega "verificado"), y la tarjeta tiene que ser del mismo titular. El cobro con tarjeta (Google Pay o NFC) se autoriza y se captura recién al validar la entrega: la plata nunca pasa por BBQ.
+- Chatear es libre. Para comprar, vender o repartir se exige identidad verificada con el chip del documento (en el teléfono; al server solo llega "verificado"), y la tarjeta tiene que ser del mismo titular. El cobro con tarjeta (Google Pay o NFC) se autoriza y se captura recién al validar la entrega: la plata nunca pasa por BBQ. Cada vendedor cobra en su propia cuenta (los contracargos son suyos) y BBQ orquesta la captura. La compra se firma con identidad digital y queda en los teléfonos de las partes (ver `docs/MODELO-NEGOCIO.md`).
 
 ## Diseño
 - **Sobrio, como WhatsApp**: que se sienta familiar para que el usuario se adapte rápido. El naranja es solo **acento** (`--bbq-accent`): botones primarios, pestaña activa y chips activos. Sin degradados, sin brillos y sin bordes llamativos.

@@ -90,6 +90,50 @@
 - el PIN para montos altos;
 - el permiso de Apple para Tap to Pay en iPhone.
 
+## Decisión del dueño (2026-10-11, b): cada vendedor cobra en su cuenta, compra firmada y vías de cobro por NFC
+
+### Quién cobra: cada vendedor en su propia cuenta ("modelo A")
+- El vendedor (y la cadetería, por el envío) tiene **su propia cuenta** en el proveedor de pagos (p. ej. Mercado Pago) y la conecta a BBQ.
+- BBQ crea el pago **en nombre del vendedor**:
+  - pide solo la autorización;
+  - **controla la captura** (QR de entrega, acuerdo de las partes o vencimiento);
+  - cobra su comisión con un reparto automático (split).
+- **El que cobra ante la red de tarjetas es el vendedor, así que los contracargos le llegan a él.** BBQ solo pierde su comisión de esa venta.
+- **Factura** el vendedor. Ojo: lo que define quién recibe el contracargo no es quién factura, sino a nombre de quién está la cuenta que procesó la tarjeta.
+- **Cambia el estudio:** reemplaza al "modelo B" (BBQ Pagos cobra a nombre propio y reparte, esquema PedidosYa) como dirección preferida.
+  - Simplifica lo regulatorio: BBQ no cobra a nombre propio y la plata no pasa por BBQ ni de paso.
+  - El envío deja de venderlo BBQ en nombre propio: lo cobra el vendedor o la cadetería en su cuenta.
+  - A confirmar con el abogado: si orquestar la captura igual exige registrarse como PSPC.
+
+### Contracargos: por qué existen y cómo se pelean
+- El titular puede reclamar en su banco ("no lo reconozco", "no me llegó"). El banco le devuelve la plata y se la descuenta a quien cobró. Decide el banco del titular, con las reglas de Visa o Mastercard: es una instancia por encima de BBQ y de las partes que no se puede evitar.
+- **Las pruebas que la red reconoce siempre** son el criptograma del chip (pago presencial certificado) y 3-D Secure (pago online). Con 3-D Secure, la responsabilidad del fraude pasa al banco emisor.
+- **Los términos no pueden quitarle al comprador el derecho al contracargo** ni sus derechos como consumidor (Ley 17.250). Lo que sí se puede es juntar pruebas que hagan perder un reclamo de mala fe.
+
+### Compra firmada con identidad digital
+Al comprar, el comprador **firma** un resumen: qué compra, a quién, el monto, la versión de los términos y la fecha. Hay dos niveles:
+1. **Con la cédula uruguaya con chip:** firma electrónica avanzada (Ley 18.600), que equivale a la firma de puño y letra. A confirmar si Agesic permite firmar desde el celular por NFC.
+2. **Con la clave de identidad de la app** (ECDSA, la que ya existe), atada a la persona que verificó su documento. Es más débil legalmente, pero no depende de terceros.
+
+El comprobante firmado queda **en los teléfonos de comprador y vendedor**, y al servidor solo llega un hash.
+
+**Paquete de pruebas:**
+1. Identidad verificada con el documento.
+2. Compra firmada: contra el "no fui yo".
+3. QR de entrega escaneado y firmado por quien entrega: contra el "no me llegó".
+
+El vendedor lo presenta ante un contracargo, y también es el respaldo de las partes en las disputas entre ellas.
+
+### Vías de cobro con tarjeta por NFC
+| Vía | Cómo funciona | Qué hace falta | Contracargos | Estado |
+|---|---|---|---|---|
+| **1. SoftPOS certificado (cobro directo por NFC)** | El comprador acerca su tarjeta o celular al teléfono del vendedor o cadete, que hace de posnet. Autorización ahora, captura al entregar | Kit (SDK) de un proveedor con kernel EMV certificado (EMVCo/marcas) y certificación del teléfono como terminal (PCI MPoC), más un adquirente. App nativa; en iPhone, el permiso de Apple | El criptograma del chip prueba que la tarjeta estuvo presente | **Viable** si un proveedor lo ofrece en Uruguay con preautorización sin contacto |
+| **2. NFC para leer + pago online con 3-D Secure** | El comprador acerca su tarjeta a **su propio** teléfono para no tipear, escribe el código de seguridad y paga como compra online con 3-D Secure, solo autorizada | Kit del procesador que tokeniza (el número no lo toca BBQ). No hace falta certificar el teléfono como posnet | 3-D Secure pasa la responsabilidad al banco | **Viable**, la más simple para arrancar. Se pierde el "acercá la tarjeta al cadete" |
+| **3. Lectura y cobro directo sin certificación (programado desde cero)** | Leer número y vencimiento por NFC y cobrarlo sin criptograma ni código de seguridad | Un adquirente que lo acepte, y ninguno puede por contrato con las marcas | Sin pruebas reconocidas por la red: el titular gana el reclamo y le cae al vendedor (o a BBQ). La verificación de identidad, la compra firmada y la factura de servicios no lo cambian ante la red | **Explorada y no viable** hoy. Leer el chip sí se puede programar; procesar el cobro no |
+
+- **Google Pay en la app:** mismo camino que la vía 2 (token y procesador), con autorización y captura diferida.
+- **Factura de servicios a nombre del titular:** prueba de domicilio para "conocer al cliente". Se pide para subir límites, pasar a Comercio y para quien cobra (vendedores y cadetes). No requiere IA: puede ser una revisión manual.
+
 ## Decisiones abiertas
 
 | Tema | Opciones | Lo que dice el estudio |
@@ -128,6 +172,8 @@ Nada de esto toca dinero.
 | **Tipos de cuenta** | No existe | Particular o Comercio, con límites y un paso a Comercio |
 | **Identidad para comerciar** | No existe | Leer el chip del documento (pasaporte o cédula) en el teléfono y exigirlo para comprar, vender y repartir (decisión del 11/10) |
 | **Cobro con tarjeta** | No existe (solo Google Pay en TEST) | Google Pay y SoftPOS por NFC en la app nativa, con autorización ahora y captura al entregar |
+| **Cuenta de cobro del vendedor** | No existe | Cada vendedor y cadetería conecta su propia cuenta en el proveedor de pagos. BBQ crea el pago en su nombre, controla la captura y cobra la comisión con split |
+| **Compra firmada** | Existe la clave ECDSA de identidad, pero no se firman compras | Firmar el resumen de la compra con los términos (con la cédula si se puede, si no con la clave de la app), guardarlo en los dos teléfonos y mandar solo el hash al servidor |
 | **Facturación** | No existe | e-Ticket o e-Factura automática al cobrar, vía un proveedor habilitado |
 | **Referidos** | `referral-engine.js` cuenta en el propio teléfono (inflable) | Conteo en el servidor, invitado real (teléfono verificado + primera compra), escalones de 3 y 10, premios = cupones del comercio con canje por QR |
 | **Vendedores de BBQ (0,4%)** | No existe | Código o link de alta de comercio y panel de comisiones sobre ventas entregadas |

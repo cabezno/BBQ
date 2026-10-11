@@ -4,6 +4,24 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — Decisión: cada vendedor cobra en su cuenta, compra firmada y vías de cobro por NFC
+- **Qué:**
+  - Nueva sección en `docs/MODELO-NEGOCIO.md` con:
+    - el modelo A (cada vendedor cobra en su cuenta y BBQ orquesta la captura);
+    - cómo funcionan los contracargos;
+    - la compra firmada con identidad digital y el paquete de pruebas;
+    - la tabla de las 3 vías de cobro por NFC: SoftPOS certificado, NFC para leer más 3-D Secure, y cobro directo sin certificación (explorada y no viable).
+  - Dos filas nuevas en la tabla de huecos.
+  - Preguntas 8 y 9 para el abogado en `docs/MODELO-PAGOS-Y-ENTREGAS.md` §9.
+  - `CLAUDE.md` y `docs/RETOMAR.md` actualizados.
+- **Por qué:** conversación con el dueño. BBQ es solo el medio y factura el vendedor, así que el contracargo tiene que caer en quien cobra. El comprador firma la compra con su identidad digital. El dueño pidió anotar también la vía de cobro directo por NFC.
+- **Cómo se probó:** solo documentación; no cambia código.
+- **Pendiente:**
+  - confirmar con el abogado si orquestar la captura exige registrarse como PSPC;
+  - confirmar la firma con la cédula por NFC con Agesic;
+  - SoftPOS en Uruguay, a confirmar con los adquirentes;
+  - código: firma de compras con la clave ECDSA y conexión de la cuenta del vendedor.
+
 ## 2026-10-11 — La tarjeta tiene que ser del titular del documento
 - **Qué:**
   - Agregado a la decisión del 11/10 en `docs/MODELO-NEGOCIO.md`: cómo comprobar que el titular de la tarjeta coincide con el documento y qué casos quedan por definir.
