@@ -73,6 +73,16 @@
 
   La plata nunca pasa por BBQ, y esto es coherente con el estudio (§3) y con no arbitrar.
 
+- **El titular de la tarjeta tiene que coincidir con el documento verificado** (agregado el 11/10). Cómo se puede comprobar:
+  - **Leer el nombre de la tarjeta por NFC no alcanza.** Muchas tarjetas sin contacto no traen el nombre (va vacío por privacidad), y Google Pay entrega un token sin nombre.
+  - **Lo confiable es preguntarle al banco emisor:** las consultas de nombre del titular (Visa y Mastercard "Account Name Inquiry") devuelven "coincide / parcial / no coincide" en una verificación de monto cero. Además, 3-D Secure prueba que quien paga controla la cuenta.
+  - **Comparar nombres no es trivial:** hay abreviaturas, tildes, segundos nombres y nombres recortados en el plástico. Hace falta tolerar coincidencias parciales.
+  - **Casos a definir:**
+    - tarjeta de un familiar (no se podría);
+    - tarjeta adicional a nombre propio sobre la cuenta de otro;
+    - tarjeta de empresa en una cuenta Comercio, que se compararía contra el RUT o la razón social.
+  - **Simetría del lado de quien cobra:** la cuenta bancaria donde se liquida al vendedor o al cadete también tendría que estar a nombre del verificado.
+
 **A confirmar con proveedores y adquirentes:**
 - quién ofrece SoftPOS en Uruguay;
 - si permiten la preautorización en cobros sin contacto;

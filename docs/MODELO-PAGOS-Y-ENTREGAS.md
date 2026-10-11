@@ -406,6 +406,7 @@ Las comisiones que definiste (el % del envío y el 0,4% para vendedores) **sirve
 2. ¿Soportan preautorización / captura diferida? ¿Plazo máximo?
 3. Requisitos, garantías, tasas y plazos de liquidación.
 4. ¿Ofrecen SoftPOS / Tap to Pay (el celular como posnet por NFC) en Uruguay? ¿Permiten preautorización en cobros sin contacto? ¿Aceptan tokens de Google Pay con captura diferida?
+5. ¿Ofrecen la consulta de nombre del titular (Visa/Mastercard Account Name Inquiry) o una forma de verificar que la tarjeta es de la persona verificada? ¿Y 3-D Secure en Uruguay?
 
 ---
 

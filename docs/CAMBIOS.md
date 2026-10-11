@@ -4,6 +4,17 @@ Qué se cambió, por qué, cómo se probó y qué queda pendiente. Lo más nuevo
 
 ---
 
+## 2026-10-11 — La tarjeta tiene que ser del titular del documento
+- **Qué:**
+  - Agregado a la decisión del 11/10 en `docs/MODELO-NEGOCIO.md`: cómo comprobar que el titular de la tarjeta coincide con el documento y qué casos quedan por definir.
+  - Pregunta nueva para los adquirentes en `docs/MODELO-PAGOS-Y-ENTREGAS.md` §9.
+  - `CLAUDE.md` actualizado.
+- **Por qué:** pedido del dueño ("los documentos tienen que coincidir con el titular de la tarjeta").
+- **Cómo se probó:** solo documentación.
+- **Pendiente:**
+  - confirmar con los adquirentes si hay consulta de nombre del titular en Uruguay;
+  - definir qué pasa con tarjetas de familiares, adicionales y de empresa.
+
 ## 2026-10-11 — Decisión: identidad con el chip del documento para comerciar y cobro con freno en la captura
 - **Qué:**
   - Nueva sección de decisión en `docs/MODELO-NEGOCIO.md` y dos filas nuevas en la tabla de huecos.
